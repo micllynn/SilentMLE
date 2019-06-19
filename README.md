@@ -14,7 +14,8 @@ The main dependencies are: numpy, scipy, matplotlib.
 ### Initializing the estimator
 First, an instance of the estimator object class is initialized. Here, the experimenter can provide experimental details and parameters, and can specify how fine-grained the generated likelihood functions should be.
 
-    estimator = MLESilent(n_simulations = 10000, n_likelihood_points = 20, num_trials = 50, failrate_low = 0.2, failrate_high = 0.8)
+    estimator = MLESilent(n_simulations = 10000, n_likelihood_points = 20,
+      num_trials = 50, failrate_low = 0.2, failrate_high = 0.8)
 
 (More details about possible kwargs can be found in the full class documentation.)
 
@@ -33,14 +34,14 @@ One can perform MLE on either a set of previous FRA estimates, or on pairs of ra
 
 By default the joint likelihood function is also plotted. This can be disabled in the method parameters.
 
-##Advanced commands
+## Advanced commands
 
-###Functions to perform experimental simulations
+### Functions to perform experimental simulations
 
     generate_realistic_constellation() #Runs a set of constrained experimental simulations and returns a subsample of silent/nonsilent synapses each with their own release probability.
     generate_fra_distribution() #Generates a distribution of uncorrected failure-rate estimates from the constrained experimental simulations, starting from a known ground truth of fraction silent synapses.
 
-#Functions to plot main figures from paper
+# Functions to plot main figures from paper
 
     #Each of these functions will redo all analysis/simulations and will return a fully formatted figure.
 
