@@ -250,8 +250,6 @@ def choose_nsilent_binomial(n_slots, frac_silent, n_sims = 1):
 
     return silent_draw
 
-cProfile.run('generate_realistic_constellation(n_simulations = 10000, unitary_reduction = False)')
-
 def generate_realistic_constellation(silent_fraction = 0.5, n_simulations = 100,
                                      method = 'iterative', pr_dist = 'uniform',
                                      n_start = 100,
