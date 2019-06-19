@@ -132,6 +132,8 @@ class MLESilent(object):
                 + '%', end = '')
 
             for ind_hyp, hyp_ in enumerate(hyp):
+                #Calculate simulated observations which fall within half an
+                #obs_bin of the current obs (ie obs is the closest obs for them).
                 obs_in_range = np.where(np.abs(fra_calc[ind_hyp] - obs_) < obs_bins/2)[0]
                 p_obs = len(obs_in_range) / len(fra_calc[ind_hyp])
                 likelihood[ind_obs, ind_hyp] = p_obs
@@ -225,21 +227,6 @@ class MLESilent(object):
 
         return joint_likelihood
 
-estimator = MLESilent(n_simulations = 10000, n_likelihood_points = 10,
-    frac_reduction = 0.1)
-
-data  = [0.34, 0.39, 0.29, 0.38, 0.27, 0.37, 0.41, 0.48, 0.27]
-data_failrate = [[0.65, 0.54], [0.54, 0.32], [0.68, 0.37], [0.32, 0.34]]
-
-joint_likelihood = estimator.perform_mle(data, dtype = 'est')
-
-# f_write = open('estimator.pkl', 'wb')
-# pickle.dump(estimator, f_write)
-#
-# f_read = open('estimator.pkl', 'rb')
-# new_estimator = pickle.load(f_read)
-
-#%%
 #------------------------------------------------------------------------------
 #SUPPORTING FUNCTIONS
 #------------------------------------------------------------------------------
@@ -3004,8 +2991,6 @@ def plot_fig4_suppLLR(n_true_silents = 100, fontsize = 12, sample_draws = 5000,
     plt.show()
 
     return
-
-#%%
 
 
 def _generate_fra_distribution_fails(method = 'iterative', pr_dist = 'uniform', silent_fraction = 0.5,
