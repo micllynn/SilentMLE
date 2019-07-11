@@ -119,7 +119,7 @@ class MLESilent(object):
                 + '%', end = '')
 
             #Generate an FRA dist
-            fra_calc[ind] = generate_fra_distribution(n_simulations = n_simulations,
+            fra_calc[ind] = gen_fra_dist(n_simulations = n_simulations,
                 silent_fraction = silent, zeroing = zeroing, **kwargs)
 
         #2. Create loglikelihood function for each case
@@ -227,11 +227,26 @@ class MLESilent(object):
 
         return joint_likelihood
 
+
+estimator = MLESilent(n_simulations = 10000, n_likelihood_points = 20,
+    num_trials = 50, failrate_low = 0.2, failrate_high = 0.8)
+
+estimator.params
+
+#Some mock data
+data_estimates = [0.18, 0.27, 0.29, 0.350, 0.28, 0.18, 0.38, 0.27, 0.59]
+data_failrates = [[0.2, 0.10], [0.4, 0.36], [0.38, 0.19], [0.58, 0.36],
+    [0.46, 0.31], [0.50, 0.28], [0.68, 0.40], [0.58, 0.25]]
+
+
+joint_likelihood1 = estimator.perform_mle(data_estimates, dtype = 'est')
+joint_likelihood2 = estimator.perform_mle(data_failrates, dtype = 'failrate')
+
 #------------------------------------------------------------------------------
 #SUPPORTING FUNCTIONS
 #------------------------------------------------------------------------------
 
-def choose_nsilent_binomial(n_slots, frac_silent, n_sims = 1):
+def binomial_fill(n_slots, frac_silent, n_sims = 1):
     '''
     Function probabilistically fills n_slots with silent synapses based on a
     binomial distribution given frac_silent. n_sims total simulations are run and
@@ -250,7 +265,7 @@ def choose_nsilent_binomial(n_slots, frac_silent, n_sims = 1):
 
     return silent_draw
 
-def generate_realistic_constellation(silent_fraction = 0.5, n_simulations = 100,
+def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
                                      method = 'iterative', pr_dist = 'uniform',
                                      n_start = 100,
                                      failrate_low = 0.3, failrate_high = 0.7,
@@ -295,7 +310,7 @@ def generate_realistic_constellation(silent_fraction = 0.5, n_simulations = 100,
         appropriate output parameters and the simulation is considered
         'completed'. The output parameters can then be used to run a failure-
         rate analysis experiment in subsequent functions (e.g.
-        generate_fra_distribution(). )
+        gen_fra_dist(). )
 
 
     INPUTS
@@ -377,7 +392,7 @@ def generate_realistic_constellation(silent_fraction = 0.5, n_simulations = 100,
 
         #Generate an initial large constellation of synapses (n_start in size) drawm from a binomial
         #filling procedure
-        silent_syn_group = choose_nsilent_binomial(n_start, silent_fraction,
+        silent_syn_group = binomial_fill(n_start, silent_fraction,
                                                    n_sims = n_sims_oversampled)
         nonsilent_syn_group = (n_start
                                * np.ones_like(silent_syn_group) ) - silent_syn_group
@@ -517,7 +532,7 @@ def generate_realistic_constellation(silent_fraction = 0.5, n_simulations = 100,
 
         for slot in slots:
             #indices of silent/nonsilent synapses to take
-            n_silent = choose_nsilent_binomial(slot, silent_fraction, n_sims =
+            n_silent = binomial_fill(slot, silent_fraction, n_sims =
                                                n_sims_os)
 
             if pr_dist is 'uniform':
@@ -613,7 +628,7 @@ def generate_realistic_constellation(silent_fraction = 0.5, n_simulations = 100,
     return nonsilent_syn_group, silent_syn_group, pr_nonsilent_syn_group, pr_silent_syn_group
 
 
-def generate_fra_distribution(silent_fraction, method = 'iterative', pr_dist = 'uniform',
+def gen_fra_dist(silent_fraction, method = 'iterative', pr_dist = 'uniform',
                                 num_trials = 50, n_simulations = 10000, n_start = 100,
                                 zeroing = False, graph_ex = False, verbose = False,
                                 unitary_reduction = False, frac_reduction = 0.2,
@@ -625,7 +640,7 @@ def generate_fra_distribution(silent_fraction, method = 'iterative', pr_dist = '
     true value for fraction silent.
 
     First, a set of experimentally realistic synapse subsets are produced in
-    generate_realistic_constellation. Then, a stochastic failure-rate
+    draw_subsample. Then, a stochastic failure-rate
     experiment is performed for n_simulation of these subsets. Finally, the
     results are stored in fra_calc.
 
@@ -640,7 +655,7 @@ def generate_fra_distribution(silent_fraction, method = 'iterative', pr_dist = '
         correspond to single-synapse experiments (glutamate uncaging or
         minimum electrical stimulation experiments).
 
-    **Parameters which are passed to the generate_realistic_constellation fn:
+    **Parameters which are passed to the draw_subsample fn:
         silent_fraction : float
             the fraction of silent synapses in the total population
         n_simulations : int
@@ -711,7 +726,7 @@ def generate_fra_distribution(silent_fraction, method = 'iterative', pr_dist = '
     #First, generate realistic groups of neurons
     nonsilent_syn_group, silent_syn_group, \
     pr_nonsilent_syn_group, pr_silent_syn_group \
-    = generate_realistic_constellation(method = method, pr_dist = pr_dist,
+    = draw_subsample(method = method, pr_dist = pr_dist,
                                        n_simulations = n_simulations,
                                        n_start = n_start,
                                        silent_fraction = silent_fraction,
@@ -749,7 +764,7 @@ def generate_fra_distribution(silent_fraction, method = 'iterative', pr_dist = '
     return fra_calc
 
 
-def run_power_analysis(fra_dist_1, fra_dist_2, init_guess = 2048,
+def power_analysis(fra_dist_1, fra_dist_2, init_guess = 2048,
                        sample_draws = 2000,
                        alpha = 0.05, beta = 0.1, stat_test = 'ranksum',
                        ctrl_n = False, verbosity = True):
@@ -945,7 +960,7 @@ def run_power_analysis(fra_dist_1, fra_dist_2, init_guess = 2048,
     return min_samplesize_required
 
 
-def run_loglikelihood_ratio_poweranalysis(fra_dist_1, likelihoods,
+def power_analysis_llr(fra_dist_1, likelihoods,
                        ind_null_silent_truefrac = 0,
                        init_guess = 2048,
                        sample_draws = 2000,
@@ -1757,6 +1772,9 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
     plt.show()
     fig.savefig(figname)
 
+plot_fig2()
+
+
 def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
               plot_sims = 40, fontsize = 9, ylab_pad_tight = -3,
               figname = 'Fig2.pdf',
@@ -1765,21 +1783,21 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
 
     '''
     Fig 2:
-        1a. Schematic of simulations
-        1b-c. Example simulations and sim. currents
-        1d-e. Description of n and p for silent and nonsilent synapses contained
+        a. Schematic of simulations
+        b-c. Example simulations and sim. currents
+        d-e. Description of n and p for silent and nonsilent synapses contained
             in each simulated set
-        1f. Example FRA histogram
+        f. Example FRA histogram
 
-        1g. Estimator bias
-        1h. Estimator variance
+        g. Estimator bias
+        h. Estimator variance
     '''
 
-    silent_fraction_low = 0.1; silent_fraction_high = 0.9
-    plot_sims = 40; fontsize = 6; ylab_pad_tight = -3
-    figname = 'FigS3.pdf'
-    trueval_lim = 0.1; frac_reduction = 0.1; method_ = 'iterative'
-    pr_dist = 'gamma'
+    # silent_fraction_low = 0.1; silent_fraction_high = 0.9
+    # plot_sims = 40; fontsize = 6; ylab_pad_tight = -3
+    # figname = 'Fig2.pdf'
+    # trueval_lim = 0.1; frac_reduction = 0.1; method_ = 'iterative'
+    # pr_dist = 'uniform'
 
     #-------------------
     #1: Simulation of synapse groups
@@ -1789,7 +1807,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
     #Run simulation: 0.5 silent
     nonsilent_syn_group_half, silent_syn_group_half, \
     pr_nonsilent_syn_group_half, pr_silent_syn_group_half = \
-    generate_realistic_constellation(method = method_, pr_dist = pr_dist,
+    draw_subsample(method = method_, pr_dist = pr_dist,
                                      n_simulations = 10000, n_start = n_start,
                                      silent_fraction = 0.5, failrate_low = 0.2,
                                      failrate_high = 0.8,
@@ -1814,7 +1832,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
 
         nonsilent_syn_group[ind_silent], silent_syn_group[ind_silent], \
         pr_nonsilent_syn_group[ind_silent], pr_silent_syn_group[ind_silent] \
-        = generate_realistic_constellation(method = method_, pr_dist = pr_dist,
+        = draw_subsample(method = method_, pr_dist = pr_dist,
                                            n_simulations = 10000, n_start = n_start,
                                            silent_fraction = silent, failrate_low = 0.2,
                                            failrate_high = 0.8,
@@ -1858,7 +1876,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
         print('\nSilent fraction: ', str(silent))
 
         #Make calculation of FRA values
-        fra_calc[ind] = generate_fra_distribution(method = method_,
+        fra_calc[ind] = gen_fra_dist(method = method_,
                                              pr_dist = pr_dist,
                                              n_simulations = 10000,
                                              silent_fraction = silent,
@@ -1866,7 +1884,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
                                              unitary_reduction = False,
                                              frac_reduction = frac_reduction)
 
-        fra_calc_z[ind] = generate_fra_distribution(method = method_,
+        fra_calc_z[ind] = gen_fra_dist(method = method_,
                                              pr_dist = pr_dist,
                                              n_simulations = 10000,
                                              silent_fraction = silent,
@@ -1989,7 +2007,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
 
     #Subplot 4/5: Nonsil/sil Release probability dist.:
     release_prob_nonsil = fig.add_subplot(spec_all[1, 2:4])
-    release_prob_dist = fig.add_subplot(spec_all[1, 4:6])
+    subset_error = fig.add_subplot(spec_all[1, 4:6])
 
     max_n_nonsilent = len(np.bincount(nonsilent_syn_group_half))
     max_n_silent = len(np.bincount(silent_syn_group_half))
@@ -2010,44 +2028,42 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
                     pr_nonsil[syn_number][0:n_pr_toplot], '.', color = color_pr,
                     alpha = 0.1, markersize = 1)
 
-    if pr_dist is 'uniform':
-        release_prob_dist.plot([0, 1], [1, 1], color = color_pr, alpha = 0.8,
-                               markersize = 1)
+    #Plot the subset composition vs superset composition for each position
+    subset_fracsil = np.empty(len(silent_truefrac_coarse), dtype = np.ndarray)
+    subset_fracsil_mean =  np.empty(len(silent_truefrac_coarse))
+    subset_fracsil_sd =  np.empty(len(silent_truefrac_coarse))
 
-    elif pr_dist is 'gamma':
-        # gamma_samples = np.random.gamma(3, 1/5.8,
-        #                                       size = 10000)
-        # release_prob_dist.hist(gamma_samples, bins = 2000, histtype = 'step',
-        #                        color = color_pr)
-        x_gamma = np.linspace(0, 1, 1000)
-        release_prob_dist.plot(x_gamma, stats.gamma.pdf(x_gamma, 3, scale = 1/5.8),
-                                color = color_pr)
+    for ind_silent, silent in enumerate(silent_truefrac_coarse):
+        subset_fracsil[ind_silent] = silent_syn_group[ind_silent] \
+            / (nonsilent_syn_group[ind_silent] + silent_syn_group[ind_silent])
+
+        subset_fracsil_mean[ind_silent] = np.mean(subset_fracsil[ind_silent])
+        subset_fracsil_sd[ind_silent] = np.std(subset_fracsil[ind_silent])
+
+    subset_error.plot(silent_truefrac_coarse, subset_fracsil_mean,
+       color = color_silent, alpha = 0.9, linewidth = 1.5)
+    subset_error.fill_between(silent_truefrac_coarse,
+        subset_fracsil_mean - subset_fracsil_sd,
+        subset_fracsil_mean + subset_fracsil_sd,
+        facecolor = color_silent, alpha = 0.2)
+
+    subset_error.plot(np.linspace(0, 1, 10), np.linspace(0, 1, 10), '--k',
+        linewidth = 0.5)
 
     #Adjust plot features
     release_prob_nonsil.set_xlim([0, 8.3])
     release_prob_nonsil.set_ylim([0, 1])
     release_prob_nonsil.set_xticks(np.arange(0, 9, 2))
-
     release_prob_nonsil.set_yticks([0, 0.5, 1])
     release_prob_nonsil.set_xlabel('active synapses')
     release_prob_nonsil.set_ylabel('mean Pr')
-    #release_prob_nonsil.set_title('Pr: Active', alpha = 0.5,
-    #                              loc = 'left')
 
-    release_prob_dist.set_xlim([0, 1])
-    #release_prob_dist.set_ylim([0, 1])
-    release_prob_dist.set_xticks([0, 0.5, 1])
-    release_prob_dist.set_yticks([])
-    release_prob_dist.set_xlabel('Pr (release prob.)')
-    release_prob_dist.set_ylabel('probability density', labelpad = 4)
-    #release_prob_dist.set_title('Pr. distribution', alpha = 0.5,
-    #                           loc = 'left')
-    release_prob_dist.text(0.95, 0.8, pr_dist, transform = release_prob_dist.transAxes,
-                           verticalalignment = 'top',
-                           horizontalalignment = 'right', color = color_pr,
-                           alpha = 0.8,
-                           fontsize = fontsize - 1, fontweight = 'bold')
-
+    subset_error.set_xlim([0, 1])
+    subset_error.set_ylim([0, 1])
+    subset_error.set_xticks([0, 0.5, 1])
+    subset_error.set_yticks([0, 0.5, 1])
+    subset_error.set_xlabel('frac. silent')
+    subset_error.set_ylabel('subset frac. sil.')
 
     # -------------------
     # 1: Plot example synapse groups and example traces
@@ -2092,7 +2108,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
 
         nonsilent_syn_group_, silent_syn_group_, \
         pr_nonsilent_syn_group_, pr_silent_syn_group_ \
-        = generate_realistic_constellation(pr_dist = pr_dist,
+        = draw_subsample(pr_dist = pr_dist,
                                            n_simulations = 1, n_start = n_start,
                                            silent_fraction = silent_, failrate_low = 0.2,
                                            failrate_high = 0.8,
@@ -2235,6 +2251,7 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
     plt.savefig(figname)
 
 
+
 def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
               figname = 'Fig4.pdf'):
     '''
@@ -2277,13 +2294,13 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
     #Generate FRA calcs and calc simple minsamples versus baseline
     for ind, silent in enumerate(silent_truefrac):
         #Generate an FRA dist
-        fra_calc[ind] = generate_fra_distribution(n_simulations = 10000,
+        fra_calc[ind] = gen_fra_dist(n_simulations = 10000,
                                              silent_fraction = silent,
                                              zeroing = True,
                                              unitary_reduction = False,
                                              frac_reduction = 0.2)
 
-        binary_calc[ind] = generate_fra_distribution(n_simulations = 10000,
+        binary_calc[ind] = gen_fra_dist(n_simulations = 10000,
                                              silent_fraction = silent,
                                              zeroing = True,
                                              unitary_reduction = False,
@@ -2318,14 +2335,14 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
 
                     #Calculate minsamples based on cond
                     if cond is 'binary':
-                        minsamples[cond][ind1_sil, ind2_sil] = run_power_analysis(
+                        minsamples[cond][ind1_sil, ind2_sil] = power_analysis(
                                 binary_calc[ind1_sil], binary_calc[ind2_sil],
                                 init_guess = guess[cond], beta = conds_beta[cond],
                                 ctrl_n = conds_ctrl_n[cond],
                                 sample_draws = sample_draws,
                                 stat_test = 'chisquare')
                     else:
-                        minsamples[cond][ind1_sil, ind2_sil] = run_power_analysis(
+                        minsamples[cond][ind1_sil, ind2_sil] = power_analysis(
                                 fra_calc[ind1_sil], fra_calc[ind2_sil],
                                 init_guess = guess[cond], beta = conds_beta[cond],
                                 ctrl_n = conds_ctrl_n[cond],
@@ -2376,7 +2393,7 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
                     guess[cond] = np.int(2 ** (exp_2))
 
                 #Calculate minsamples
-                minsamples[cond][ind_sil] = run_loglikelihood_ratio_poweranalysis(
+                minsamples[cond][ind_sil] = power_analysis_llr(
                         fra_calc[ind_sil], likelihood,
                         init_guess = guess[cond], beta = conds_beta[cond],
                         sample_draws = sample_draws)
@@ -2802,7 +2819,7 @@ def plot_fig4_suppLLR(n_true_silents = 100, fontsize = 12, sample_draws = 5000,
     for ind, silent in enumerate(silent_truefrac):
         print('\tsilent: ' + str(silent))
         #Generate an FRA dist
-        fra_calc[ind] = generate_fra_distribution(n_simulations = 10000,
+        fra_calc[ind] = gen_fra_dist(n_simulations = 10000,
                                              silent_fraction = silent,
                                              zeroing = True,
                                              unitary_reduction = False,
@@ -2844,7 +2861,7 @@ def plot_fig4_suppLLR(n_true_silents = 100, fontsize = 12, sample_draws = 5000,
                     guess[cond] = np.int(2 ** (exp_2))
 
                 #Calculate minsamples
-                minsamples[cond][ind_sil] = run_loglikelihood_ratio_poweranalysis(
+                minsamples[cond][ind_sil] = power_analysis_llr(
                         fra_calc[ind_sil], likelihood,
                         init_guess = guess[cond], beta = conds_beta[cond],
                         sample_draws = sample_draws)
@@ -2991,7 +3008,7 @@ def plot_fig4_suppLLR(n_true_silents = 100, fontsize = 12, sample_draws = 5000,
     return
 
 
-def _generate_fra_distribution_fails(method = 'iterative', pr_dist = 'uniform', silent_fraction = 0.5,
+def _gen_fra_dist_fails(method = 'iterative', pr_dist = 'uniform', silent_fraction = 0.5,
                                 num_trials = 50, n_simulations = 10000, n_start = 100,
                                 zeroing = False, graph_ex = False, verbose = False,
                                 unitary_reduction = False, frac_reduction = 0.2,
@@ -3015,7 +3032,7 @@ def _generate_fra_distribution_fails(method = 'iterative', pr_dist = 'uniform', 
     #First, generate realistic groups of neurons
     nonsilent_syn_group, silent_syn_group, \
     pr_nonsilent_syn_group, pr_silent_syn_group \
-    = generate_realistic_constellation(method = method, pr_dist = pr_dist,
+    = draw_subsample(method = method, pr_dist = pr_dist,
                                        n_simulations = n_simulations,
                                        n_start = n_start,
                                        silent_fraction = silent_fraction,
@@ -3085,7 +3102,7 @@ def _mle_fh_fd():
         print('\tSilent frac: ', str(silent))
         #Generate an FRA dist
         fra_calc[ind], fra_fail_h[ind], fra_fail_d[ind] \
-            = _generate_fra_distribution_fails(n_simulations = n_simulations,
+            = _gen_fra_dist_fails(n_simulations = n_simulations,
             silent_fraction = silent, zeroing = zeroing)
 
     #2. Create loglikelihood function for each case
@@ -3155,7 +3172,7 @@ def _mle_fh_fd():
     silent_frac_ex = 0.2
 
     fra_calc_ex, fra_fail_h_ex, fra_fail_d_ex \
-        = _generate_fra_distribution_fails(n_simulations = n_sims_ex,
+        = _gen_fra_dist_fails(n_simulations = n_sims_ex,
         silent_fraction = silent_frac_ex, zeroing = False)
 
     joint_llhood = np.zeros(len(hyp))
@@ -3171,3 +3188,23 @@ def _mle_fh_fd():
     ax_likelihood.set_xlabel('silent fraction')
     ax_likelihood.set_ylabel('likelihood')
     ax_likelihood.set_xlim([0, 0.5])
+
+
+#%%
+
+nt = 50
+k = np.arange(0, nt)
+nns = 100
+
+p_k = np.zeros(len(k))
+
+for ind, k_ in enumerate(k):
+    p_k[ind] = sp.special.comb(int(nt), int(k_)) * (0.5**(1/nns))**(nns*k_) * (1- (0.5**(1/nns))**nns)**(nt-k_)
+
+
+
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.plot(k, p_k)
+ax.set_xlabel('k')
+ax.set_ylabel('p(k)')
