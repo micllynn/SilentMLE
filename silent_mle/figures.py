@@ -12,6 +12,25 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 from .core import *
+import os
+
+def _verify_path_existence(folder):
+    """
+    Internal function which verifies that some folder exists in the cwd,
+    and if not, creates it.
+    """
+    _startpath = os.getcwd()
+
+    fold_exists = False
+    for entry in os.scandir(_startpath):
+        if entry.is_dir() is True and folder in entry.name:
+            fold_exists = True
+
+    if fold_exists is False:
+        os.makedirs(_startpath + '/figs')
+
+    return
+
 
 def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
 
@@ -186,7 +205,9 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     n_ch_inset.set_yticks(np.linspace(20, 40, 3))
     n_ch_inset.tick_params(axis = 'both', which = 'major', labelsize = fontsize - 3)
 
-    plt.savefig(figname)
+    path = os.getcwd() + '/figs/' + figname
+    _verify_path_existence('figs')
+    plt.savefig(path)
 
     return
 
@@ -469,8 +490,11 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
     est_dist_multi_failx.set_ylim([0, 150])
     est_dist_multi_failx.set_yticks(np.arange(0, 151, 25))
 
-    plt.savefig(figname)
+    path = os.getcwd() + '/figs/' + figname
+    _verify_path_existence('figs')
+    plt.savefig(path)
 
+    return
 
 def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
 
@@ -630,7 +654,11 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
               verticalalignment = 'center')
 
     plt.show()
-    fig.savefig(figname)
+    path = os.getcwd() + '/figs/' + figname
+    _verify_path_existence('figs')
+    plt.savefig(path)
+
+    return
 
 plot_fig2()
 
@@ -1108,7 +1136,12 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
 
     #Set tight layouts for all
     spec_all.tight_layout(fig)
-    plt.savefig(figname)
+
+    path = os.getcwd() + '/figs/' + figname
+    _verify_path_existence('figs')
+    plt.savefig(path)
+
+    return
 
 
 
@@ -1637,8 +1670,10 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
         #Set tight layout and save
         fig.set_constrained_layout_pads(w_pad=0.001, h_pad=0.001,
                 hspace=0.01, wspace=0.01)
-    #    spec_all.tight_layout(fig)
-        plt.savefig(figname, bbox_inches = 'tight')
+
+        path = os.getcwd() + '/figs/' + figname
+        _verify_path_existence('figs')
+        plt.savefig(path, bbox_inches = 'tight')
 
     return
 
@@ -1862,7 +1897,11 @@ def plot_fig4_suppLLR(n_true_silents = 100, fontsize = 12, sample_draws = 5000,
     #---------------------------------
     #Set tight layout and save
     spec_all.tight_layout(fig)
-    plt.savefig(figname, bbox_inches = 'tight')
+
+    path = os.getcwd() + '/figs/' + figname
+    _verify_path_existence('figs')
+    plt.savefig(path)
+
     plt.show()
 
     return
