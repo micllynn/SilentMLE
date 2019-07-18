@@ -19,6 +19,8 @@ $ cd ~/Downloads/SilentMLE*
 $ python setup.py install
 ```
 
+## Performing maximum-likelihood estimation
+
 ### Initializing the estimator
 First, the package is imported and an instance of the `sil.Estimator` class is initialized. This runs a set of constrained simulations to determine the mapping between the ground-truth fraction silent in some population, and the biased measurement returned by electrical stimulation experiments. The resulting likelihood function is then stored in the estimator (`estimator.likelihood`), which is then ready to estimate.
 
@@ -27,7 +29,7 @@ import silentmle as sil
 estimator = sil.Estimator()
 ```
 
-Alternately, the `sil.Estimator` class can be initialized with a number of experimental constraints and/or simulation parameters:
+Alternately, the `sil.Estimator` class can be initialized with a number of experimental constraints and/or simulation parameters. A full list of possible parameters can be found in the full class documentation of `sil.Estimator`, accessible through `print(sil.Estimator.__init__.__doc__)`. As an example:
 ```python
 #Simulate using a fine-grained 500 points in the hypothesis-space (fraction silent);
 #use a uniform release probability distribution for the synapses; and
@@ -38,14 +40,11 @@ estimator = sil.Estimator(n_likelihood_points = 500,
       failrate_high = 0.6)
 ```
 
-(More details about possible kwargs can be found in the full class documentation of `sil.Estimator`)
+All simulation and experimental parameters are stored in the class instance as `estimator.params` for easy access.
+The observation space and hypothesis space employed are stored as `estimator.obs` and `estimator.hyp` respectively.
+The numerically simulated likelihood function is stored as `estimator.likelihood`.
 
-All simulation and experimental parameters are stored in the class instance for easy access:
-```python
-estimator.params #A dictionary of simulation parameters used
-```
-
-### Performing maximum likelihood estimation on a set of data
+### MLE on experimental data
 One can perform MLE on either a set of previous FRA estimates, or on pairs of raw failure rates at -70mV and +40mV. Both types are demonstrated below.
 
 ```python
@@ -62,17 +61,20 @@ Here, likelihood returns a vector of length `h` containing the joint likelihood 
 
 ## Advanced commands
 
-### Core functions to perform experimental simulations and FRA analysis
+### Core simulation/analysis functions
 
 ```python
-sil.core.draw_subsample() #Runs a set of constrained experimental simulations and returns a subsample of silent/nonsilent synapses each with their own release probability.
+#Experimental simulation drawing a subsample of synapses from a large pop.
+sil.core.draw_subsample()
 
-sil.core.fra(fh, fd) #Estimates, using the FRA equation, the fraction silent synapses given failure rates at hyperpolarized (fh) and depolarized (fd) membrane potentials.
+#Returns FRA estimate of fraction silent.
+sil.core.fra(fh, fd)
 
-sil.core.gen_fra_dist() #Generates a distribution of uncorrected failure-rate estimates from the constrained experimental simulations, starting from a known ground truth of fraction silent synapses.
+#Generates distribution of FRA values given a ground truth silent.
+sil.core.gen_fra_dist()
 ```
 
-# Functions to plot main figures from paper
+### Plotting functions
 
 ```python
 #Each of these functions will redo all analysis/simulations and will return a fully formatted figure.
