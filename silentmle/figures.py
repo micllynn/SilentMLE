@@ -1,3 +1,5 @@
+import os, sys
+
 import numpy as np
 import scipy as sp
 import scipy.stats as stats
@@ -11,26 +13,10 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
-from .core import *
-import os
-
-def _verify_path_existence(folder):
-    """
-    Internal function which verifies that some folder exists in the cwd,
-    and if not, creates it.
-    """
-    _startpath = os.getcwd()
-
-    fold_exists = False
-    for entry in os.scandir(_startpath):
-        if entry.is_dir() is True and folder in entry.name:
-            fold_exists = True
-
-    if fold_exists is False:
-        os.makedirs(_startpath + '/figs')
-
-    return
-
+try:
+    from .core import *
+except:
+    from core import *
 
 def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
 
@@ -44,10 +30,8 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     #Define spec for entire fig
     spec_all = gridspec.GridSpec(nrows = 5, ncols = 4, figure=fig)
 
-
-    #Define spec for entire fig
-    # spec_all = gridspec.GridSpec(nrows = 2, ncols = 3, height_ratios = [1, 1],
-    #                              width_ratios = [1, 1, 1])
+    #Define bins for all hists
+    hist_bins = np.arange(-150, 50, 10)
 
     ##########################
     #Plot example simulation
@@ -96,8 +80,8 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     fails_dep = np.sum(np.random.rand(50, 10000) < 0.5, axis = 0) / 50
     calc = (1 - np.log(fails_hyp) / np.log(fails_dep)) * 100
 
-    estim_dist.hist(calc, bins = 25, weights = np.ones_like(
-            calc) / len(calc), facecolor = [0, 0, 0, 0.3])
+    estim_dist.hist(calc, bins = hist_bins, weights = np.ones_like(
+            calc) / len(calc), color = [0.5, 0.5, 0.5], histtype = 'step')
     estim_dist.set_xlabel('Estimated silent (%)')
     estim_dist.set_xlim([-150, 100])
     estim_dist.set_xticks([-150, -100, -50, 0, 50, 100])
@@ -130,8 +114,8 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
         red_ = 1 / (1 + np.exp( -5 * (ratio_ - 0.5)))
         color_ = [red_, 0.2, 1 - red_]
 
-        sweep_change.hist(calc[ind], bins = 25, weights = np.ones_like(
-            calc[ind]) / len(calc[ind]), facecolor = color_, alpha = 0.3)
+        sweep_change.hist(calc[ind], bins = hist_bins, weights = np.ones_like(
+            calc[ind]) / len(calc[ind]), color = color_, histtype = 'step')
 
         sw_ch_inset.plot(trial, calc_sd[ind], 'o', color = color_, alpha = 0.4)
 
@@ -182,8 +166,8 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
         red_ = 1 / (1 + np.exp( -6 * (ratio_ - 0.5)))
         color_ = [red_ , 0.1, 1 - red_]
 
-        num_change.hist(calc[ind], bins = 25, weights = np.ones_like(
-            calc[ind]) / len(calc[ind]), facecolor = color_, alpha = 0.15)
+        num_change.hist(calc[ind], bins = hist_bins, weights = np.ones_like(
+            calc[ind]) / len(calc[ind]), color = color_, histtype = 'step')
 
         n_ch_inset.plot(n, calc_sd[ind], 'o', color = color_, alpha = 0.4)
 
@@ -205,9 +189,12 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     n_ch_inset.set_yticks(np.linspace(20, 40, 3))
     n_ch_inset.tick_params(axis = 'both', which = 'major', labelsize = fontsize - 3)
 
-    path = os.getcwd() + '/figs/' + figname
-    _verify_path_existence('figs')
-    plt.savefig(path)
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
+
+    plt.savefig(path_f)
 
     return
 
@@ -276,7 +263,7 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
                              borderpad = 0)
     fd_inset.patch.set_alpha(0)
 
-    #Calculate the failrate dists f
+    #Calculate the failrate dists
     fails = np.empty(len(pr), dtype = np.ndarray)
 
     for ind, pr_ in enumerate(pr):
@@ -292,7 +279,6 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
     fail_dist.set_ylabel('probability density')
     fail_dist.set_ylim([0, 0.3])
     fail_dist.set_yticks(np.linspace(0, 0.3, 7))
-
 
     #Calculate the failrate sd
     inter_ = 0.01
@@ -490,9 +476,12 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
     est_dist_multi_failx.set_ylim([0, 150])
     est_dist_multi_failx.set_yticks(np.arange(0, 151, 25))
 
-    path = os.getcwd() + '/figs/' + figname
-    _verify_path_existence('figs')
-    plt.savefig(path)
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
+
+    plt.savefig(path_f)
 
     return
 
@@ -653,14 +642,14 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
               horizontalalignment = 'center',
               verticalalignment = 'center')
 
-    plt.show()
-    path = os.getcwd() + '/figs/' + figname
-    _verify_path_existence('figs')
-    plt.savefig(path)
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
+
+    plt.savefig(path_f)
 
     return
-
-plot_fig2()
 
 
 def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
@@ -1137,9 +1126,12 @@ def plot_fig2(silent_fraction_low = 0.1, silent_fraction_high = 0.9,
     #Set tight layouts for all
     spec_all.tight_layout(fig)
 
-    path = os.getcwd() + '/figs/' + figname
-    _verify_path_existence('figs')
-    plt.savefig(path)
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
+
+    plt.savefig(path_f)
 
     return
 
@@ -1497,7 +1489,7 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
         subp_base.set_yticks([0, 256, 512, 768, 1024])
         subp_base.set_xlabel('Detectable $\Delta$ silent (%)')
         subp_base.set_ylabel('minimum samples required')
-        subp_base.set_title('Discriminability',
+        subp_base.set_title('Discrisminability',
                               alpha = 0.5, fontweight = 'bold', loc = 'left')
 
         subp_base_inset = inset_axes(subp_base, width='60%', height='70%', loc = 1)
@@ -1671,9 +1663,12 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
         fig.set_constrained_layout_pads(w_pad=0.001, h_pad=0.001,
                 hspace=0.01, wspace=0.01)
 
-        path = os.getcwd() + '/figs/' + figname
-        _verify_path_existence('figs')
-        plt.savefig(path, bbox_inches = 'tight')
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
+
+    plt.savefig(path_f, bbox_inches = 'tight')
 
     return
 
@@ -1898,11 +1893,12 @@ def plot_fig4_suppLLR(n_true_silents = 100, fontsize = 12, sample_draws = 5000,
     #Set tight layout and save
     spec_all.tight_layout(fig)
 
-    path = os.getcwd() + '/figs/' + figname
-    _verify_path_existence('figs')
-    plt.savefig(path)
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
 
-    plt.show()
+    plt.savefig(path_f)
 
     return
 
@@ -2089,21 +2085,21 @@ def _mle_fh_fd():
     ax_likelihood.set_xlim([0, 0.5])
 
 
-#%%
+# nt = 50
+# k = np.arange(0, nt)
+# nns = 100
+#
+# p_k = np.zeros(len(k))
+#
+# for ind, k_ in enumerate(k):
+#     p_k[ind] = sp.special.comb(int(nt), int(k_)) * (0.5**(1/nns))**(nns*k_) * (1- (0.5**(1/nns))**nns)**(nt-k_)
+#
+#
+#
+# fig = plt.figure()
+# ax = fig.add_subplot(1, 1, 1)
+# ax.plot(k, p_k)
+# ax.set_xlabel('k')
+# ax.set_ylabel('p(k)')
 
-nt = 50
-k = np.arange(0, nt)
-nns = 100
-
-p_k = np.zeros(len(k))
-
-for ind, k_ in enumerate(k):
-    p_k[ind] = sp.special.comb(int(nt), int(k_)) * (0.5**(1/nns))**(nns*k_) * (1- (0.5**(1/nns))**nns)**(nt-k_)
-
-
-
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1)
-ax.plot(k, p_k)
-ax.set_xlabel('k')
-ax.set_ylabel('p(k)')
+plot_fig1()

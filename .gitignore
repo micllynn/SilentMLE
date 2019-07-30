@@ -1,5 +1,5 @@
 .DS_Store
 *.pdf
 test.py
-/__pycache__
-/figs
+silentmle/__pycache__/
+silentmle/figs
