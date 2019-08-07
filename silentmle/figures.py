@@ -1383,302 +1383,302 @@ def plot_fig4(n_true_silents = 26, fontsize = 12, sample_draws = 5000,
     ############################################################################
     #Make figure
     ############################################################################
-        plt.style.use('publication_pnas_ml')
+    plt.style.use('publication_pnas_ml')
 
-        fig = plt.figure(constrained_layout=True)
-        fig.set_figheight(6.5)
-        fig.set_figwidth(3.43)
-        plt.rc('font', size = 6)
+    fig = plt.figure(constrained_layout=True)
+    fig.set_figheight(6.5)
+    fig.set_figwidth(3.43)
+    plt.rc('font', size = 6)
 
-        #Define spec for entire fig
-        spec_all = gridspec.GridSpec(nrows = 3, ncols = 2, height_ratios = [1.5, 1, 1],
-                                     width_ratios = [1, 2], figure = fig)
+    #Define spec for entire fig
+    spec_all = gridspec.GridSpec(nrows = 3, ncols = 2, height_ratios = [1.5, 1, 1],
+                                 width_ratios = [1, 2], figure = fig)
 
-        #Spec for top right
-        spec_top = gridspec.GridSpecFromSubplotSpec(1, 2,
-                                                         subplot_spec = spec_all[0, 1],
-                                                         wspace = 0.3, hspace = 0.5,
-                                                         width_ratios = [2, 1])
+    #Spec for top right
+    spec_top = gridspec.GridSpecFromSubplotSpec(1, 2,
+                                                     subplot_spec = spec_all[0, 1],
+                                                     wspace = 0.3, hspace = 0.5,
+                                                     width_ratios = [2, 1])
 
-        spec_middle = gridspec.GridSpecFromSubplotSpec(1, 2,
-                                                     subplot_spec = spec_all[1, 1],
-                                                     wspace = 0.3, hspace = 0.5)
-        #Spec for bottom right
-        spec_bottom = gridspec.GridSpecFromSubplotSpec(1, 2,
-                                                     subplot_spec = spec_all[2, 1],
-                                                     wspace = 0.4, hspace = 0.5)
+    spec_middle = gridspec.GridSpecFromSubplotSpec(1, 2,
+                                                 subplot_spec = spec_all[1, 1],
+                                                 wspace = 0.3, hspace = 0.5)
+    #Spec for bottom right
+    spec_bottom = gridspec.GridSpecFromSubplotSpec(1, 2,
+                                                 subplot_spec = spec_all[2, 1],
+                                                 wspace = 0.4, hspace = 0.5)
 
-        # plt.rc('svg', fonttype = 'none')
-        #
-        # xsmall_textsize = fontsize - 4
-        # small_textsize = fontsize - 3
-        # medium_textsize = fontsize - 1
-        # large_textsize = fontsize
-        #
-        # plt.rc('font', size = small_textsize)          # controls default text sizes
-        # plt.rc('axes', titlesize = medium_textsize,
-        #        labelsize = small_textsize, labelpad = 2)    # fontsize of the axes title
-        # plt.rc('xtick', labelsize = xsmall_textsize)    # fontsize of the tick labels
-        # plt.rc('ytick', labelsize = xsmall_textsize)    # fontsize of the tick labels
-        #plt.rc('legend', fontsize = fontsize - 3)    # legend fontsize
+    # plt.rc('svg', fonttype = 'none')
+    #
+    # xsmall_textsize = fontsize - 4
+    # small_textsize = fontsize - 3
+    # medium_textsize = fontsize - 1
+    # large_textsize = fontsize
+    #
+    # plt.rc('font', size = small_textsize)          # controls default text sizes
+    # plt.rc('axes', titlesize = medium_textsize,
+    #        labelsize = small_textsize, labelpad = 2)    # fontsize of the axes title
+    # plt.rc('xtick', labelsize = xsmall_textsize)    # fontsize of the tick labels
+    # plt.rc('ytick', labelsize = xsmall_textsize)    # fontsize of the tick labels
+    #plt.rc('legend', fontsize = fontsize - 3)    # legend fontsize
 
-        #Define colors to be used
-        color_1 = np.array([0.25, 0.55, 0.18])
+    #Define colors to be used
+    color_1 = np.array([0.25, 0.55, 0.18])
 
-        #---------------------------
-        #Top right: 3d plot and histograph
-        subp_3d = fig.add_subplot(spec_top[0, 0], projection='3d')
-        surf = subp_3d.plot_surface(xax_3d * 100, yax_3d * 100,
-                                    minsamples['base'].clip(max = 100, min = 0),
-                                    rstride = 1, cstride = 1, vmax = 100, vmin = 0,
-                                    cmap = cm.coolwarm, alpha = 0.5)
-        subp_3d.set_zlim(0, 100)
-        subp_3d.set_xlabel('true silent (%)')
-        subp_3d.set_ylabel('true silent (%)')
-        subp_3d.set_zlabel('min samples')
-        # subp_3d.tick_params(labelsize = small_textsize)
-        subp_3d.view_init(elev = 30, azim = 70)
-        subp_3d.set_title('Power analysis', alpha = 0.5, fontweight = 'bold',
-                                loc = 'left')
+    #---------------------------
+    #Top right: 3d plot and histograph
+    subp_3d = fig.add_subplot(spec_top[0, 0], projection='3d')
+    surf = subp_3d.plot_surface(xax_3d * 100, yax_3d * 100,
+                                minsamples['base'].clip(max = 100, min = 0),
+                                rstride = 1, cstride = 1, vmax = 100, vmin = 0,
+                                cmap = cm.coolwarm, alpha = 0.5)
+    subp_3d.set_zlim(0, 100)
+    subp_3d.set_xlabel('true silent (%)')
+    subp_3d.set_ylabel('true silent (%)')
+    subp_3d.set_zlabel('min samples')
+    # subp_3d.tick_params(labelsize = small_textsize)
+    subp_3d.view_init(elev = 30, azim = 70)
+    subp_3d.set_title('Power analysis', alpha = 0.5, fontweight = 'bold',
+                            loc = 'left')
 
-        #Histogram subplot: First, calculate where discrim is 0.1, 0.2, 0.3
-        discrims = [0.1, 0.2, 0.3]
-    #    color_d = [[0, 0.2, 0.05], [0, 0.4, 0.1], [0, 0.6, 0.2]]
-        color_d = [[0, 0.2, 0.1], [0, 0.4, 0.2], [0, 0.6, 0.3]]
-        alpha_d = [0.65, 0.5, 0.35]
+    #Histogram subplot: First, calculate where discrim is 0.1, 0.2, 0.3
+    discrims = [0.1, 0.2, 0.3]
+#    color_d = [[0, 0.2, 0.05], [0, 0.4, 0.1], [0, 0.6, 0.2]]
+    color_d = [[0, 0.2, 0.1], [0, 0.4, 0.2], [0, 0.6, 0.3]]
+    alpha_d = [0.65, 0.5, 0.35]
 
-        subp_3d_extra = fig.add_subplot(spec_top[0, 1])
+    subp_3d_extra = fig.add_subplot(spec_top[0, 1])
 
-        for ind, discrim in enumerate(discrims):
-            #Calc index in x,y,z coords where discrim is true
-            ind_disc = np.argmin(np.abs(discrim_dsilent
-                                   - discrim)).astype(np.int)
+    for ind, discrim in enumerate(discrims):
+        #Calc index in x,y,z coords where discrim is true
+        ind_disc = np.argmin(np.abs(discrim_dsilent
+                               - discrim)).astype(np.int)
 
-            #Plot lines on subp_3d
-            subp_3d.plot(discrim_xax_coords['base'][ind_disc] * 100,
-                         discrim_yax_coords['base'][ind_disc] * 100,
-                         np.clip(discrim_zax_coords['base'][ind_disc], 0, 100),
-                         color = color_d[ind], alpha = alpha_d[ind],
-                         linewidth = 3)
+        #Plot lines on subp_3d
+        subp_3d.plot(discrim_xax_coords['base'][ind_disc] * 100,
+                     discrim_yax_coords['base'][ind_disc] * 100,
+                     np.clip(discrim_zax_coords['base'][ind_disc], 0, 100),
+                     color = color_d[ind], alpha = alpha_d[ind],
+                     linewidth = 3)
 
-            #Plot histograms on subp_3d_extra
-            subp_3d_extra.hist(discrim_nsamples['base'][ind_disc],
-                               bins = np.logspace(np.log10(10),np.log10(1000), 25),
-                               weights = (np.ones_like(
-                                       discrim_nsamples['base'][ind_disc])
-                                       / len(discrim_nsamples['base'][ind_disc])),
-                               color = color_d[ind], alpha = alpha_d[ind],
-                               histtype='step', linewidth = 2)
+        #Plot histograms on subp_3d_extra
+        subp_3d_extra.hist(discrim_nsamples['base'][ind_disc],
+                           bins = np.logspace(np.log10(10),np.log10(1000), 25),
+                           weights = (np.ones_like(
+                                   discrim_nsamples['base'][ind_disc])
+                                   / len(discrim_nsamples['base'][ind_disc])),
+                           color = color_d[ind], alpha = alpha_d[ind],
+                           histtype='step', linewidth = 2)
 
-        subp_3d_extra.legend(labels = ['10', '20', '30'], title = '$\Delta$ silent (%)', frameon = False)
-        subp_3d_extra.spines['right'].set_visible(False)
-        subp_3d_extra.spines['top'].set_visible(False)
-        subp_3d_extra.yaxis.set_ticks_position('left')
-        subp_3d_extra.xaxis.set_ticks_position('bottom')
-        subp_3d_extra.set_ylim([0, 0.6])
-        subp_3d_extra.set_xscale("log")
-        subp_3d_extra.set_xlim([0, 10 ** 3])
-        subp_3d_extra.set_yticks([0, 0.3, 0.6])
-        subp_3d_extra.set_xlabel('minimum samples')
-        subp_3d_extra.set_ylabel('probability density')
-        subp_3d_extra.set_title('Discriminability \ndistributions', alpha = 0.5, fontweight = 'bold',
-                                loc = 'left')
+    subp_3d_extra.legend(labels = ['10', '20', '30'], title = '$\Delta$ silent (%)', frameon = False)
+    subp_3d_extra.spines['right'].set_visible(False)
+    subp_3d_extra.spines['top'].set_visible(False)
+    subp_3d_extra.yaxis.set_ticks_position('left')
+    subp_3d_extra.xaxis.set_ticks_position('bottom')
+    subp_3d_extra.set_ylim([0, 0.6])
+    subp_3d_extra.set_xscale("log")
+    subp_3d_extra.set_xlim([0, 10 ** 3])
+    subp_3d_extra.set_yticks([0, 0.3, 0.6])
+    subp_3d_extra.set_xlabel('minimum samples')
+    subp_3d_extra.set_ylabel('probability density')
+    subp_3d_extra.set_title('Discriminability \ndistributions', alpha = 0.5, fontweight = 'bold',
+                            loc = 'left')
 
-        #---------------------------
-        #Middle right: Power analysis curves
+    #---------------------------
+    #Middle right: Power analysis curves
 
-        #First curve: basic power analysis
-        subp_base = fig.add_subplot(spec_middle[0, 0])
+    #First curve: basic power analysis
+    subp_base = fig.add_subplot(spec_middle[0, 0])
 
-        subp_base.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        subp_base.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
-                                 + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
-                                 - discrim_nsamp_std['base'], facecolor = color_1,
-                                 alpha = 0.1)
-        subp_base.spines['right'].set_visible(False)
-        subp_base.spines['top'].set_visible(False)
-        subp_base.yaxis.set_ticks_position('left')
-        subp_base.xaxis.set_ticks_position('bottom')
-        subp_base.set_xlim([0, 50])
-        subp_base.set_ylim([0, 1024])
-        subp_base.set_xticks([0, 10, 20, 30, 40, 50])
-        subp_base.set_yticks([0, 256, 512, 768, 1024])
-        subp_base.set_xlabel('Detectable $\Delta$ silent (%)')
-        subp_base.set_ylabel('minimum samples required')
-        subp_base.set_title('Discrisminability',
-                              alpha = 0.5, fontweight = 'bold', loc = 'left')
+    subp_base.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    subp_base.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
+                             + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
+                             - discrim_nsamp_std['base'], facecolor = color_1,
+                             alpha = 0.1)
+    subp_base.spines['right'].set_visible(False)
+    subp_base.spines['top'].set_visible(False)
+    subp_base.yaxis.set_ticks_position('left')
+    subp_base.xaxis.set_ticks_position('bottom')
+    subp_base.set_xlim([0, 50])
+    subp_base.set_ylim([0, 1024])
+    subp_base.set_xticks([0, 10, 20, 30, 40, 50])
+    subp_base.set_yticks([0, 256, 512, 768, 1024])
+    subp_base.set_xlabel('Detectable $\Delta$ silent (%)')
+    subp_base.set_ylabel('minimum samples required')
+    subp_base.set_title('Discrisminability',
+                          alpha = 0.5, fontweight = 'bold', loc = 'left')
 
-        subp_base_inset = inset_axes(subp_base, width='60%', height='70%', loc = 1)
-        subp_base_inset.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        subp_base_inset.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
-                                 + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
-                                 - discrim_nsamp_std['base'], facecolor = color_1,
-                                 alpha = 0.1)
-        subp_base_inset.spines['right'].set_visible(False)
-        subp_base_inset.spines['top'].set_visible(False)
-        subp_base_inset.yaxis.set_ticks_position('left')
-        subp_base_inset.xaxis.set_ticks_position('bottom')
-        subp_base_inset.set_xlim([15, 50])
-        subp_base_inset.set_ylim([0, 50])
-        subp_base_inset.set_xticks([15, 30, 45])
-        subp_base_inset.set_yticks([0, 10, 20, 30, 40, 50])
-        # subp_base_inset.tick_params(labelsize = xsmall_textsize)
-        mark_inset(subp_base, subp_base_inset, loc1=3, loc2=4, fc="none",
-                   ec="0.5", ls = ':', lw = 2)
-
-
-        #-----------------------------------------------
-        #Second curve: power analysis with changes in control group
-        subp_ctrln = fig.add_subplot(spec_middle[0, 1])
-
-        color_n10 = [0.5, 0.2, 0.3]
-        color_n20 = [0.8, 0.1, 0.2]
-
-        base_ = subp_ctrln.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        subp_ctrln.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
-                                 + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
-                                 - discrim_nsamp_std['base'], facecolor = color_1,
-                                 alpha = 0.1)
-
-        n10 = subp_ctrln.plot(discrim_dsilent * 100, discrim_nsamp_mean['c10'],
-                      color = color_n10, alpha = 0.6, linewidth = 2)
-        subp_ctrln.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['c10']
-                                 + discrim_nsamp_std['c10'], discrim_nsamp_mean['c10']
-                                 - discrim_nsamp_std['c10'], facecolor = color_n10,
-                                 alpha = 0.1)
-
-        n20 = subp_ctrln.plot(discrim_dsilent * 100, discrim_nsamp_mean['c20'],
-                      color = color_n20, alpha = 0.6, linewidth = 2)
-        subp_ctrln.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['c20']
-                                 + discrim_nsamp_std['c20'], discrim_nsamp_mean['c20']
-                                 - discrim_nsamp_std['c20'], facecolor = color_n20,
-                                 alpha = 0.1)
-        subp_ctrln.legend([base_[-1], n10[-1], n20[-1]], ['exp n', '10', '20'], title = 'control n',
-                          frameon = False, loc = 1)
-        subp_ctrln.spines['right'].set_visible(False)
-        subp_ctrln.spines['top'].set_visible(False)
-        subp_ctrln.yaxis.set_ticks_position('left')
-        subp_ctrln.xaxis.set_ticks_position('bottom')
-        subp_ctrln.set_xlim([0, 50])
-        subp_ctrln.set_ylim([0, 1024])
-        subp_ctrln.set_xticks([0, 10, 20, 30, 40, 50])
-        subp_ctrln.set_yticks([0, 256, 512, 768, 1024])
-        subp_ctrln.set_xlabel('Detectable $\Delta$ silent (%)')
-        subp_ctrln.set_ylabel('minimum samples required')
-        subp_ctrln.set_title('Discriminability: \n$\Delta$ ctrl n',
-                              alpha = 0.5, fontweight = 'bold', loc = 'left')
-
-        #-----------------------------------------------
-        #Third curve: power analysis with binary discriminability
-        subp_binary = fig.add_subplot(spec_bottom[0, 0])
-
-        color_binary = [0.2, 0.2, 0.2]
-
-        base_ = subp_binary.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        subp_binary.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
-                                 + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
-                                 - discrim_nsamp_std['base'], facecolor = color_1,
-                                 alpha = 0.1)
-
-        binary = subp_binary.plot(discrim_dsilent * 100, discrim_nsamp_mean['binary'],
-                      color = color_binary, alpha = 0.6, linewidth = 2)
-        subp_binary.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['binary']
-                                 + discrim_nsamp_std['binary'], discrim_nsamp_mean['binary']
-                                 - discrim_nsamp_std['binary'], facecolor = color_binary,
-                                 alpha = 0.1)
-        subp_binary.spines['right'].set_visible(False)
-        subp_binary.spines['top'].set_visible(False)
-        subp_binary.yaxis.set_ticks_position('left')
-        subp_binary.xaxis.set_ticks_position('bottom')
-        subp_binary.set_xlim([0, 50])
-        subp_binary.set_ylim([0, 1024])
-        subp_binary.set_xticks([0, 10, 20, 30, 40, 50])
-        subp_binary.set_yticks([0, 256, 512, 768, 1024])
-        subp_binary.set_xlabel('Detectable $\Delta$ silent (%)')
-        subp_binary.set_ylabel('minimum samples required')
-        subp_binary.set_title('Discriminability: \n$\Delta$ ctrl n',
-                              alpha = 0.5, fontweight = 'bold', loc = 'left')
-
-        subp_binary_inset = inset_axes(subp_binary, width='60%', height='70%', loc = 1)
-        base_ = subp_binary_inset.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        subp_binary_inset.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
-                                 + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
-                                 - discrim_nsamp_std['base'], facecolor = color_1,
-                                 alpha = 0.1)
-        b02_ = subp_binary_inset.plot(discrim_dsilent * 100, discrim_nsamp_mean['binary'],
-                      color = color_binary, alpha = 0.6, linewidth = 2)
-        subp_binary_inset.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['binary']
-                                 + discrim_nsamp_std['binary'], discrim_nsamp_mean['binary']
-                                 - discrim_nsamp_std['binary'], facecolor = color_binary,
-                                 alpha = 0.1)
-        subp_binary_inset.legend([base_[-1], binary[-1]], ['FRA', 'binary'],
-                          frameon = False, loc = 1)
-        subp_binary_inset.spines['right'].set_visible(False)
-        subp_binary_inset.spines['top'].set_visible(False)
-        subp_binary_inset.yaxis.set_ticks_position('left')
-        subp_binary_inset.xaxis.set_ticks_position('bottom')
-        subp_binary_inset.set_xlim([15, 50])
-        subp_binary_inset.set_ylim([0, 200])
-        subp_binary_inset.set_xticks([15, 30, 45])
-        subp_binary_inset.set_yticks([0, 50, 100, 150, 200])
-        # subp_binary_inset.tick_params(labelsize = xsmall_textsize)
-        mark_inset(subp_binary, subp_binary_inset, loc1=3, loc2=4, fc="none",
-                   ec="0.5", ls = ':', lw = 2)
-
-        #-----------------------------------------------
-        #Fourth curve: power analysis with binary discriminability
-        subp_llr = fig.add_subplot(spec_bottom[0, 1])
-
-        color_llr = [0.2, 0.2, 0.2]
-
-        llr_base = subp_llr.plot(silent_truefrac * 100, minsamples['llr'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        llr_binary = subp_llr.plot(silent_truefrac * 100, minsamples['llr_binary'],
-                      color = color_binary, alpha = 0.6, linewidth = 2)
-        subp_llr.spines['right'].set_visible(False)
-        subp_llr.spines['top'].set_visible(False)
-        subp_llr.yaxis.set_ticks_position('left')
-        subp_llr.xaxis.set_ticks_position('bottom')
-        subp_llr.set_xlim([0, 50])
-        subp_llr.set_ylim([0, 128])
-        subp_llr.set_xticks([0, 10, 20, 30, 40, 50])
-        subp_llr.set_yticks([0, 32, 64, 96, 128])
-        subp_llr.set_xlabel('silent synapses (%)')
-        subp_llr.set_ylabel('minimum samples required')
-        subp_llr.set_title('Log-likelihood \nratio vs null',
-                              alpha = 0.5, fontweight = 'bold', loc = 'left')
-
-        subp_llr_inset = inset_axes(subp_llr, width='60%', height='70%', loc = 1)
-        llr_base_inset = subp_llr_inset.plot(silent_truefrac * 100, minsamples['llr'], color = color_1,
-                           alpha = 0.6, linewidth = 2)
-        llr_binary_inset = subp_llr_inset.plot(silent_truefrac * 100, minsamples['llr_binary'],
-                      color = color_binary, alpha = 0.6, linewidth = 2)
+    subp_base_inset = inset_axes(subp_base, width='60%', height='70%', loc = 1)
+    subp_base_inset.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    subp_base_inset.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
+                             + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
+                             - discrim_nsamp_std['base'], facecolor = color_1,
+                             alpha = 0.1)
+    subp_base_inset.spines['right'].set_visible(False)
+    subp_base_inset.spines['top'].set_visible(False)
+    subp_base_inset.yaxis.set_ticks_position('left')
+    subp_base_inset.xaxis.set_ticks_position('bottom')
+    subp_base_inset.set_xlim([15, 50])
+    subp_base_inset.set_ylim([0, 50])
+    subp_base_inset.set_xticks([15, 30, 45])
+    subp_base_inset.set_yticks([0, 10, 20, 30, 40, 50])
+    # subp_base_inset.tick_params(labelsize = xsmall_textsize)
+    mark_inset(subp_base, subp_base_inset, loc1=3, loc2=4, fc="none",
+               ec="0.5", ls = ':', lw = 2)
 
 
-        subp_llr_inset.spines['right'].set_visible(False)
-        subp_llr_inset.spines['top'].set_visible(False)
-        subp_llr_inset.yaxis.set_ticks_position('left')
-        subp_llr_inset.xaxis.set_ticks_position('bottom')
-        subp_llr_inset.set_xlim([15, 50])
-        subp_llr_inset.set_ylim([0, 10])
-        subp_llr_inset.set_xticks([15, 30, 45])
-        subp_llr_inset.set_yticks([0, 5, 10])
-        subp_llr_inset.legend([llr_base_inset, llr_binary_inset], ['LLR-FRA', 'LLR-binary'],
-                        frameon = False)
-        # subp_llr_inset.tick_params(labelsize = xsmall_textsize)
-        mark_inset(subp_llr, subp_llr_inset, loc1=3, loc2=4, fc="none",
-            ec="0.5", ls = ':', lw = 2)
+    #-----------------------------------------------
+    #Second curve: power analysis with changes in control group
+    subp_ctrln = fig.add_subplot(spec_middle[0, 1])
+
+    color_n10 = [0.5, 0.2, 0.3]
+    color_n20 = [0.8, 0.1, 0.2]
+
+    base_ = subp_ctrln.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    subp_ctrln.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
+                             + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
+                             - discrim_nsamp_std['base'], facecolor = color_1,
+                             alpha = 0.1)
+
+    n10 = subp_ctrln.plot(discrim_dsilent * 100, discrim_nsamp_mean['c10'],
+                  color = color_n10, alpha = 0.6, linewidth = 2)
+    subp_ctrln.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['c10']
+                             + discrim_nsamp_std['c10'], discrim_nsamp_mean['c10']
+                             - discrim_nsamp_std['c10'], facecolor = color_n10,
+                             alpha = 0.1)
+
+    n20 = subp_ctrln.plot(discrim_dsilent * 100, discrim_nsamp_mean['c20'],
+                  color = color_n20, alpha = 0.6, linewidth = 2)
+    subp_ctrln.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['c20']
+                             + discrim_nsamp_std['c20'], discrim_nsamp_mean['c20']
+                             - discrim_nsamp_std['c20'], facecolor = color_n20,
+                             alpha = 0.1)
+    subp_ctrln.legend([base_[-1], n10[-1], n20[-1]], ['exp n', '10', '20'], title = 'control n',
+                      frameon = False, loc = 1)
+    subp_ctrln.spines['right'].set_visible(False)
+    subp_ctrln.spines['top'].set_visible(False)
+    subp_ctrln.yaxis.set_ticks_position('left')
+    subp_ctrln.xaxis.set_ticks_position('bottom')
+    subp_ctrln.set_xlim([0, 50])
+    subp_ctrln.set_ylim([0, 1024])
+    subp_ctrln.set_xticks([0, 10, 20, 30, 40, 50])
+    subp_ctrln.set_yticks([0, 256, 512, 768, 1024])
+    subp_ctrln.set_xlabel('Detectable $\Delta$ silent (%)')
+    subp_ctrln.set_ylabel('minimum samples required')
+    subp_ctrln.set_title('Discriminability: \n$\Delta$ ctrl n',
+                          alpha = 0.5, fontweight = 'bold', loc = 'left')
+
+    #-----------------------------------------------
+    #Third curve: power analysis with binary discriminability
+    subp_binary = fig.add_subplot(spec_bottom[0, 0])
+
+    color_binary = [0.2, 0.2, 0.2]
+
+    base_ = subp_binary.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    subp_binary.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
+                             + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
+                             - discrim_nsamp_std['base'], facecolor = color_1,
+                             alpha = 0.1)
+
+    binary = subp_binary.plot(discrim_dsilent * 100, discrim_nsamp_mean['binary'],
+                  color = color_binary, alpha = 0.6, linewidth = 2)
+    subp_binary.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['binary']
+                             + discrim_nsamp_std['binary'], discrim_nsamp_mean['binary']
+                             - discrim_nsamp_std['binary'], facecolor = color_binary,
+                             alpha = 0.1)
+    subp_binary.spines['right'].set_visible(False)
+    subp_binary.spines['top'].set_visible(False)
+    subp_binary.yaxis.set_ticks_position('left')
+    subp_binary.xaxis.set_ticks_position('bottom')
+    subp_binary.set_xlim([0, 50])
+    subp_binary.set_ylim([0, 1024])
+    subp_binary.set_xticks([0, 10, 20, 30, 40, 50])
+    subp_binary.set_yticks([0, 256, 512, 768, 1024])
+    subp_binary.set_xlabel('Detectable $\Delta$ silent (%)')
+    subp_binary.set_ylabel('minimum samples required')
+    subp_binary.set_title('Discriminability: \n$\Delta$ ctrl n',
+                          alpha = 0.5, fontweight = 'bold', loc = 'left')
+
+    subp_binary_inset = inset_axes(subp_binary, width='60%', height='70%', loc = 1)
+    base_ = subp_binary_inset.plot(discrim_dsilent * 100, discrim_nsamp_mean['base'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    subp_binary_inset.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['base']
+                             + discrim_nsamp_std['base'], discrim_nsamp_mean['base']
+                             - discrim_nsamp_std['base'], facecolor = color_1,
+                             alpha = 0.1)
+    b02_ = subp_binary_inset.plot(discrim_dsilent * 100, discrim_nsamp_mean['binary'],
+                  color = color_binary, alpha = 0.6, linewidth = 2)
+    subp_binary_inset.fill_between(discrim_dsilent * 100, discrim_nsamp_mean['binary']
+                             + discrim_nsamp_std['binary'], discrim_nsamp_mean['binary']
+                             - discrim_nsamp_std['binary'], facecolor = color_binary,
+                             alpha = 0.1)
+    subp_binary_inset.legend([base_[-1], binary[-1]], ['FRA', 'binary'],
+                      frameon = False, loc = 1)
+    subp_binary_inset.spines['right'].set_visible(False)
+    subp_binary_inset.spines['top'].set_visible(False)
+    subp_binary_inset.yaxis.set_ticks_position('left')
+    subp_binary_inset.xaxis.set_ticks_position('bottom')
+    subp_binary_inset.set_xlim([15, 50])
+    subp_binary_inset.set_ylim([0, 200])
+    subp_binary_inset.set_xticks([15, 30, 45])
+    subp_binary_inset.set_yticks([0, 50, 100, 150, 200])
+    # subp_binary_inset.tick_params(labelsize = xsmall_textsize)
+    mark_inset(subp_binary, subp_binary_inset, loc1=3, loc2=4, fc="none",
+               ec="0.5", ls = ':', lw = 2)
+
+    #-----------------------------------------------
+    #Fourth curve: power analysis with binary discriminability
+    subp_llr = fig.add_subplot(spec_bottom[0, 1])
+
+    color_llr = [0.2, 0.2, 0.2]
+
+    llr_base = subp_llr.plot(silent_truefrac * 100, minsamples['llr'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    llr_binary = subp_llr.plot(silent_truefrac * 100, minsamples['llr_binary'],
+                  color = color_binary, alpha = 0.6, linewidth = 2)
+    subp_llr.spines['right'].set_visible(False)
+    subp_llr.spines['top'].set_visible(False)
+    subp_llr.yaxis.set_ticks_position('left')
+    subp_llr.xaxis.set_ticks_position('bottom')
+    subp_llr.set_xlim([0, 50])
+    subp_llr.set_ylim([0, 128])
+    subp_llr.set_xticks([0, 10, 20, 30, 40, 50])
+    subp_llr.set_yticks([0, 32, 64, 96, 128])
+    subp_llr.set_xlabel('silent synapses (%)')
+    subp_llr.set_ylabel('minimum samples required')
+    subp_llr.set_title('Log-likelihood \nratio vs null',
+                          alpha = 0.5, fontweight = 'bold', loc = 'left')
+
+    subp_llr_inset = inset_axes(subp_llr, width='60%', height='70%', loc = 1)
+    llr_base_inset = subp_llr_inset.plot(silent_truefrac * 100, minsamples['llr'], color = color_1,
+                       alpha = 0.6, linewidth = 2)
+    llr_binary_inset = subp_llr_inset.plot(silent_truefrac * 100, minsamples['llr_binary'],
+                  color = color_binary, alpha = 0.6, linewidth = 2)
 
 
-        #---------------------------------
-        #Set tight layout and save
-        fig.set_constrained_layout_pads(w_pad=0.001, h_pad=0.001,
-                hspace=0.01, wspace=0.01)
+    subp_llr_inset.spines['right'].set_visible(False)
+    subp_llr_inset.spines['top'].set_visible(False)
+    subp_llr_inset.yaxis.set_ticks_position('left')
+    subp_llr_inset.xaxis.set_ticks_position('bottom')
+    subp_llr_inset.set_xlim([15, 50])
+    subp_llr_inset.set_ylim([0, 10])
+    subp_llr_inset.set_xticks([15, 30, 45])
+    subp_llr_inset.set_yticks([0, 5, 10])
+    subp_llr_inset.legend([llr_base_inset, llr_binary_inset], ['LLR-FRA', 'LLR-binary'],
+                    frameon = False)
+    # subp_llr_inset.tick_params(labelsize = xsmall_textsize)
+    mark_inset(subp_llr, subp_llr_inset, loc1=3, loc2=4, fc="none",
+        ec="0.5", ls = ':', lw = 2)
+
+
+    #---------------------------------
+    #Set tight layout and save
+    fig.set_constrained_layout_pads(w_pad=0.001, h_pad=0.001,
+            hspace=0.01, wspace=0.01)
 
     path = os.path.join(os.getcwd(), 'figs')
     if not os.path.exists(path):
