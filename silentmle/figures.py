@@ -8,6 +8,7 @@ import scipy.signal as sp_signal
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib.gridspec as gridspec
+import seaborn as sns
 
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -18,7 +19,12 @@ try:
 except:
     from core import *
 
-def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
+#Define global colormap for red_blue
+cm_ = sns.diverging_palette(240, 15, l=45, s=90, center="dark", as_cmap=True)
+
+def plot_fig1(figname = 'Figure1.pdf', fontsize = 8,
+    cmap = sns.diverging_palette(240, 15, l=45, s=90, center="dark",
+    as_cmap=True), cmap_hyp=0.9, cmap_dep=0.1):
 
     plt.style.use('publication_pnas_ml')
 
@@ -31,11 +37,12 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     spec_all = gridspec.GridSpec(nrows = 5, ncols = 4, figure=fig)
 
     #Define bins for all hists
-    hist_bins = np.arange(-150, 50, 10)
+    bins_ = np.arange(-150, 50, 10)
 
     ##########################
     #Plot example simulation
     ########################
+
     sim_ex = fig.add_subplot(spec_all[2, 2:4])
 
     currents = np.where(np.random.rand((50)) < 0.5, 0.0, -10.0)
@@ -57,17 +64,19 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     failrate_hyp = np.sum(currents[0:50] > -5) / 50
     failrate_dep = np.sum(currents[50:] < 5) / 50
 
-    txt_hyp = 'Hyp. fail rate = {}'.format(failrate_hyp)
-    txt_dep = 'Dep. fail rate = {}'.format(failrate_dep)
+    txt_hyp = f'Fh = {failrate_hyp}'
+    txt_dep = f'Fd = {failrate_dep}'
     estimate = (1 - np.log(failrate_hyp) / np.log(failrate_dep)) * 100
-    txt_calc = 'Estimated silent = {0:.1f} %'.format(estimate)
+    txt_calc = f'Estimated silent = {estimate:.1f} %'
 
-    #sim_ex.textc
-    sim_ex.text(0.55, 0.3, txt_dep, fontsize = fontsize - 2,
-                color = [0.8, 0.2, 0.1, 0.7], transform = sim_ex.transAxes,
-                horizontalalignment='left')
+    sim_ex.text(0.1, 0.35, txt_hyp, fontsize = fontsize-2,
+                color = cmap(cmap_hyp), transform = sim_ex.transAxes,
+                horizontalalignment='left', verticalalignment = 'bottom')
+    sim_ex.text(0.9, 0.65, txt_dep, fontsize = fontsize - 2,
+                color = cmap(cmap_dep), transform = sim_ex.transAxes,
+                horizontalalignment='right', verticalalignment = 'top')
     sim_ex.text(0.5, 0.95, txt_calc, fontsize = fontsize-2, fontweight = 'bold',
-                color = [0.3, 0.1, 0.3, 0.7], transform = sim_ex.transAxes,
+                color = [0, 0, 0], transform = sim_ex.transAxes,
                 horizontalalignment='center')
 
     ########################
@@ -80,8 +89,9 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     fails_dep = np.sum(np.random.rand(50, 10000) < 0.5, axis = 0) / 50
     calc = (1 - np.log(fails_hyp) / np.log(fails_dep)) * 100
 
-    estim_dist.hist(calc, bins = hist_bins, weights = np.ones_like(
-            calc) / len(calc), color = [0.5, 0.5, 0.5], histtype = 'step')
+    estim_dist.hist(calc, bins = bins_, weights = np.ones_like(
+            calc) / len(calc), histtype = 'step', color = [0.5, 0.5, 0.5],
+            alpha = 0.8)
     estim_dist.set_xlabel('Estimated silent (%)')
     estim_dist.set_xlim([-150, 100])
     estim_dist.set_xticks([-150, -100, -50, 0, 50, 100])
@@ -114,20 +124,21 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
         red_ = 1 / (1 + np.exp( -5 * (ratio_ - 0.5)))
         color_ = [red_, 0.2, 1 - red_]
 
-        sweep_change.hist(calc[ind], bins = hist_bins, weights = np.ones_like(
-            calc[ind]) / len(calc[ind]), color = color_, histtype = 'step')
+        sweep_change.hist(calc[ind], bins = bins_, weights = np.ones_like(
+            calc[ind]) / len(calc[ind]), color = cmap(ratio_), alpha = 0.8, histtype = 'step')
 
-        sw_ch_inset.plot(trial, calc_sd[ind], 'o', color = color_, alpha = 0.4)
+        sw_ch_inset.plot(trial, calc_sd[ind], color = cmap(ratio_),
+            alpha = 0.8, marker = 'o', fillstyle = 'full', markersize = 4)
 
-    sw_ch_inset.plot(trials, calc_sd, color = [0, 0, 0, 0.3])
+    sw_ch_inset.plot(trials, calc_sd, color = [0, 0, 0, 0.6])
 
-    ylim_max = 0.2
+    ylim_max = 0.4
 
     sweep_change.set_xlabel('Estimated silent (%)')
     sweep_change.set_xlim([-150, 60])
     sweep_change.set_xticks([-150, -100, -50, 0, 50])
     sweep_change.set_ylabel('pdf')
-    sweep_change.set_ylim([0, ylim_max])
+    sweep_change.set_ylim([0, 0.5])
     sweep_change.set_yticks(np.linspace(0, ylim_max, 5))
 
     sw_ch_inset.set_xlabel('Sweep num.', fontsize = fontsize - 2)
@@ -142,6 +153,8 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
     ########################
     #Plot dist. estimates where synapse num. is changing
     ########################
+    _ylim_max = 0.2
+
     num_change = fig.add_subplot(spec_all[4, 2:4])
     n_ch_inset = inset_axes(num_change, width='100%', height='35%', loc = 3,
                              bbox_to_anchor = (.17, .7, .5, .95),
@@ -162,24 +175,25 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
         calc[ind] = (1 - np.log(fails_hyp) / np.log(fails_dep)) * 100
         calc_sd[ind] = np.std(calc[ind])
 
-        ratio_ = ind / (len(trials) -1)
+        ratio_ = ind / (len(n_syn) -1)
         red_ = 1 / (1 + np.exp( -6 * (ratio_ - 0.5)))
         color_ = [red_ , 0.1, 1 - red_]
 
-        num_change.hist(calc[ind], bins = hist_bins, weights = np.ones_like(
-            calc[ind]) / len(calc[ind]), color = color_, histtype = 'step')
+        num_change.hist(calc[ind], bins = bins_, weights = np.ones_like(
+            calc[ind]) / len(calc[ind]), color = cm_(ratio_), alpha = 0.8,
+            histtype = 'step')
 
-        n_ch_inset.plot(n, calc_sd[ind], 'o', color = color_, alpha = 0.4)
+        n_ch_inset.plot(n, calc_sd[ind], color = cm_(ratio_),
+            alpha = 0.8, marker = 'o', fillstyle = 'full', markersize = 4)
 
-    n_ch_inset.plot(n_syn, calc_sd, color = [0, 0, 0, 0.3])
+    n_ch_inset.plot(n_syn, calc_sd, color = [0, 0, 0, 0.6])
 
-    ylim_max = 0.2
     num_change.set_xlabel('Estimated silent (%)')
     num_change.set_xlim([-150, 60])
     num_change.set_xticks([-150, -100, -50, 0, 50])
-    num_change.set_ylabel('pdfs')
-    num_change.set_ylim([0, ylim_max])
-    num_change.set_yticks(np.linspace(0, ylim_max, 5))
+    num_change.set_ylabel('pdf')
+    num_change.set_ylim([0, _ylim_max])
+    num_change.set_yticks(np.linspace(0, _ylim_max, 5))
 
     n_ch_inset.set_xlabel('n synapses', fontsize = fontsize - 2)
     n_ch_inset.set_xlim([1, 7])
@@ -198,8 +212,12 @@ def plot_fig1(figname = 'Figure1.pdf', fontsize = 8):
 
     return
 
-def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
+def plot_fig1_S1(figname='Figure1_S1.pdf', fontsize=9,
+    cmap_pr = sns.diverging_palette(240, 15, l=45, s=90, n=6, center="dark", as_cmap = True),
+    cmap_n = sns.cubehelix_palette(start=-0, rot=-0.5, light=0.9, dark=0.1, as_cmap = True),
+    bins_ = np.arange(-150, 50, 10)):
 
+    bins_ = np.arange(-150, 50, 10)
     fig = plt.figure()
 
     fig.set_figheight(8)
@@ -217,8 +235,9 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
     failex = []
 
     pr = [0.05, 0.5, 0.95]
-    #color_pr = [[0.46, 0.63, 0.85], [0.3, 0.3, 0.3], [0.90, 0.49, 0.32]]
-    color_pr = [[0.2, 0.4, 0.8], [0.3, 0.3, 0.3], [0.90, 0.49, 0.32]]
+    color_pr = [cmap_pr(0.2)[0:3], [0.3, 0.3, 0.3], cmap_pr(0.8)[0:3]]
+    alpha_ = 0.9
+    alphalow_ = 0.8
 
     for ind, pr_ in enumerate(pr):
         failex.append(fig.add_subplot(spec_failex[ind, 0]))
@@ -230,9 +249,9 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
         fail_ind = np.where(np.abs(currents) < 5)[0]
 
         failex[ind].plot(suc_ind, currents[suc_ind], '.', color = color_pr[ind],
-              alpha = 0.6, markeredgewidth=0)
+              alpha = alpha_, markeredgewidth=0)
         failex[ind].plot(fail_ind, currents[fail_ind], '.', color = [0.7, 0.7, 0.7],
-            alpha = 0.6, markeredgewidth=0)
+            alpha = alpha_, markeredgewidth=0)
         failex[ind].set_ylim([-12, 2])
         failex[ind].set_yticks([-10, 0])
         failex[ind].set_xlim([0, 50])
@@ -243,7 +262,7 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
         text_ = 'Pr = {}'.format(pr_)
 
         failex[ind].text(0.95, 0.5, text_, fontsize = fontsize ,
-              fontweight = 'bold', color = color_pr[ind], alpha = 0.6,
+              fontweight = 'bold', color = color_pr[ind], alpha = alpha_,
               transform = failex[ind].transAxes, horizontalalignment = 'right',
               verticalalignment = 'center')
 
@@ -269,8 +288,8 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
     for ind, pr_ in enumerate(pr):
 
         fails[ind] = np.sum(np.random.rand(50, 10000) < (1 - pr_), axis = 0) / 50
-        fail_dist.hist(fails[ind], bins = 25, weights = np.ones_like(fails[ind]) / len(fails[ind]),
-                       facecolor = color_pr[ind], alpha = 0.9)
+        fail_dist.hist(fails[ind], bins = np.linspace(0, 1, 100), weights = np.ones_like(fails[ind]) / len(fails[ind]),
+                           facecolor = color_pr[ind], alpha = alpha_)
 
     fail_dist.legend(labels = pr, title = 'Pr', loc = (0.15, 0.35))
     fail_dist.set_xlabel('failure rate')
@@ -335,13 +354,13 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
         fail_ind_dep = np.where(np.abs(fails_dep_I) < 5)[0]
 
         calcex[ind].plot(suc_ind_hyp, fails_hyp_I[suc_ind_hyp], '.',
-              color = color_pr[ind], alpha = 0.7, markeredgewidth=0)
+              color = color_pr[ind], alpha = alphalow_, markeredgewidth=0)
         calcex[ind].plot(fail_ind_hyp, fails_hyp_I[fail_ind_hyp], '.',
-              color = [0.7, 0.7, 0.7], alpha = 0.7, markeredgewidth=0)
+              color = [0.7, 0.7, 0.7], alpha = alphalow_, markeredgewidth=0)
         calcex[ind].plot(suc_ind_dep + 50, fails_dep_I[suc_ind_dep], '.',
-              color = color_pr[ind], alpha = 0.7, markeredgewidth=0)
+              color = color_pr[ind], alpha = alphalow_, markeredgewidth=0)
         calcex[ind].plot(fail_ind_dep + 50, fails_dep_I[fail_ind_dep], '.',
-              color = [0.7, 0.7, 0.7], alpha = 0.7, markeredgewidth=0)
+              color = [0.7, 0.7, 0.7], alpha = alphalow_, markeredgewidth=0)
 
         calcex[ind].set_ylim([-12, 12])
         calcex[ind].set_yticks([-10, 0, 10])
@@ -354,7 +373,7 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
         text_sscalc = 'Est. silent = {0:.1f} %'.format(calc_)
 
         calcex[ind].text(0.05, 0.8, text_pr, fontsize = fontsize ,
-              fontweight = 'bold', color = color_pr[ind], alpha = 0.6,
+              fontweight = 'bold', color = color_pr[ind], alpha = alphalow_,
               transform = calcex[ind].transAxes, horizontalalignment = 'left',
               verticalalignment = 'center')
         calcex[ind].text(0.95, 0.2, text_sscalc, fontsize = fontsize - 2,
@@ -369,7 +388,7 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
             calcex[ind].set_ylabel('Sim. current (pA)')
 
     ########################
-    #Silent synapse estimate plot
+    #Estimated silent as Pr varies
     ########################
     est_dist = fig.add_subplot(spec_all[1, 1])
     est_cumul = fig.add_subplot(spec_all[1, 2])
@@ -388,12 +407,12 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
         calc_ = calc_[~np.isnan(calc_)]
         calc_ = calc_[~np.isinf(calc_)]
 
-        est_dist.hist(calc_, bins = 30, weights = np.ones_like(calc_) / len(calc_),
-                       facecolor = color_pr[ind], alpha = 0.5)
+        est_dist.hist(calc_, bins = bins_, weights = np.ones_like(calc_) / len(calc_),
+                       color = color_pr[ind], alpha = alpha_, histtype = 'step')
 
-        est_cumul.hist(calc_, bins = 100, density = True, histtype = 'step',
-                       cumulative = True, color = color_pr[ind], alpha = 0.6,
-                       linewidth = 4)
+        est_cumul.hist(calc_, bins = bins_, density = True, histtype = 'step',
+                       cumulative = True, color = color_pr[ind],
+                       alpha = alpha_, linewidth = 1)
 
     est_dist.legend(labels = pr, title = 'Pr', loc = (0.15, 0.35))
     est_dist.set_xlabel('estimated silent (%)')
@@ -436,10 +455,7 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
         failrate_syn[ind] = np.empty_like(pr_fine)
 
         #Pick a color
-        ratio_ = ind / (len(n_syn) - 1)
-        blue_ = 1 / (1 + np.exp(-5 * (ratio_ - 0.5)))
-        color_ = [0, 0.25 + blue_/3, 0.7 - (blue_ / 2)]
-        color_syn[ind] = color_
+        color_syn[ind] = cmap_n(ind / (len(n_syn)-1))
 
         for ind_pr, pr_ in enumerate(pr_fine):
             failrate_syn[ind][ind_pr] = (1 - pr_) ** n
@@ -457,10 +473,11 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
                                              failrate_syn[ind] > 0.95))
         calc_syn[ind][find_range] = np.nan
 
-        est_dist_multi.plot(pr_fine, calc_syn[ind], color = color_syn[ind], alpha = 0.5,
-                             linewidth = 2)
+        est_dist_multi.plot(pr_fine, calc_syn[ind], color = color_syn[ind],
+                            alpha = alphalow_,linewidth = 2)
         est_dist_multi_failx.plot(failrate_syn[ind], calc_syn[ind],
-                                  color = color_syn[ind], alpha = 0.5, linewidth = 2)
+                            color = color_syn[ind], alpha = alphalow_,
+                            linewidth = 2)
 
     est_dist_multi.legend(labels = n_syn, title = 'Num. synapses')
     est_dist_multi.set_xlabel('release probability')
@@ -485,7 +502,7 @@ def plot_fig1_S1(figname = 'Figure1_S1.pdf', fontsize = 9):
 
     return
 
-def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
+def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9, alpha_ = 0.9):
 
     fig = plt.figure()
 
@@ -542,13 +559,13 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
         fail_ind_dep = np.where(np.abs(fails_dep_I) < 5)[0]
 
         failex[ind].plot(suc_ind_hyp, fails_hyp_I[suc_ind_hyp], '.',
-              color = color_fails[ind], alpha = 0.7, markeredgewidth=0)
+              color = color_fails[ind], alpha = alpha_, markeredgewidth=0)
         failex[ind].plot(fail_ind_hyp, fails_hyp_I[fail_ind_hyp], '.',
-              color = [0.7, 0.7, 0.7], alpha = 0.7, markeredgewidth=0)
+              color = [0.7, 0.7, 0.7], alpha = alpha_, markeredgewidth=0)
         failex[ind].plot(suc_ind_dep + 50, fails_dep_I[suc_ind_dep], '.',
-              color = color_fails[ind], alpha = 0.7, markeredgewidth=0)
+              color = color_fails[ind], alpha = alpha_, markeredgewidth=0)
         failex[ind].plot(fail_ind_dep + 50, fails_dep_I[fail_ind_dep], '.',
-              color = [0.7, 0.7, 0.7], alpha = 0.7, markeredgewidth=0)
+              color = [0.7, 0.7, 0.7], alpha = alpha_, markeredgewidth=0)
 
         failex[ind].set_ylim([-16, 16])
         failex[ind].set_yticks([-10, 0, 10])
@@ -566,11 +583,11 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
         text_dp = 'dep. fails: {0:.2f}'.format(fails_dep[ind])
 
         failex[ind].text(0.05, 0.8, text_hp, fontsize = fontsize,
-              fontweight = 'bold', color = color_fails[ind], alpha = 0.4,
+              fontweight = 'bold', color = color_fails[ind], alpha = alpha_-0.2,
               transform = failex[ind].transAxes, horizontalalignment = 'left',
               verticalalignment = 'center')
         failex[ind].text(0.95, 0.2, text_dp, fontsize = fontsize,
-              fontweight = 'bold', color = color_fails[ind], alpha = 0.9,
+              fontweight = 'bold', color = color_fails[ind], alpha = alpha_-0.2,
               transform = failex[ind].transAxes, horizontalalignment = 'right',
               verticalalignment = 'center')
 
@@ -594,7 +611,7 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
                          textcoords = 'data',
                          arrowprops = dict(arrowstyle="->",
                          connectionstyle="arc3", color = color_fails[ind],
-                         alpha = 0.4, linewidth = 1.5, shrinkA=1, shrinkB=0.5))
+                         alpha = 0.9, linewidth = 1.5, shrinkA=1, shrinkB=0.5))
 
         spl_log.annotate("",
                          xy = (fails_dep[ind], np.log(fails_dep[ind])),
@@ -612,13 +629,13 @@ def plot_fig1_S2(figname = 'Figure1_S2.pdf', fontsize = 9):
                          textcoords = 'data',
                          arrowprops = dict(arrowstyle="<->",
                          connectionstyle="arc3", color = 'k',
-                         alpha = 0.6, linewidth = 1, shrinkA=0.5, shrinkB=0.5))
+                         alpha = 0.9, linewidth = 1, shrinkA=0.5, shrinkB=0.5))
 
         xcoord_text_ = (fails_hyp[ind] + fails_dep[ind]) / 2
         ycoord_text_ = -3.75
 
         spl_log.text(xcoord_text_, ycoord_text_, '$\Delta$ 0.1', fontsize = fontsize - 3,
-                     color = 'k', alpha = 0.6, horizontalalignment = 'center',
+                     color = 'k', alpha = alpha_-0.2, horizontalalignment = 'center',
                      verticalalignment = 'center')
 
 
@@ -2102,4 +2119,4 @@ def _mle_fh_fd():
 # ax.set_xlabel('k')
 # ax.set_ylabel('p(k)')
 
-plot_fig1()
+plot_fig1_S2()
