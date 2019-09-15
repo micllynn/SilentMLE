@@ -12,7 +12,6 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 
-
 def binomial_fill(n_slots, frac_silent, n_sims = 1):
     """
     Function probabilistically fills n_slots with silent synapses based on a
@@ -369,7 +368,6 @@ def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
         silent_syn_group = silent_syn_group[sims_keep].astype(np.int)
         pr_silent_syn_group = pr_silent_syn_group[sims_keep, :]
         pr_nonsilent_syn_group = pr_nonsilent_syn_group[sims_keep, :]
-
 
     #-------------------
     #Create visual depiction of synapses
