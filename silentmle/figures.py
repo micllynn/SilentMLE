@@ -864,7 +864,7 @@ def plot_fig2(silent_fraction_low=0.1,
     # -------------------
     # 1: Simulation of synapse groups
     # -------------------
-    n_start = 400
+    n_start = 100
 
     # Run simulation: 0.5 silent
     nonsilent_syn_group_half, silent_syn_group_half, \
@@ -1059,9 +1059,8 @@ def plot_fig2(silent_fraction_low=0.1,
     n_plot_nonsil.set_ylabel('probability density')
     n_plot_nonsil.set_xticks(np.arange(0, 9, 2))
     n_plot_nonsil.set_xlim([0, 8])
-
     n_plot_nonsil.set_ylim([0, 0.8])
-    # n_plot_nonsil.set_title('n: Active', alpha = 0.5, loc = 'left')
+    
     leg_ns = n_plot_nonsil.legend(labels=(silent_truefrac_coarse * 100).astype(
         np.int),
                                   title='silent (%)',
@@ -1071,11 +1070,9 @@ def plot_fig2(silent_fraction_low=0.1,
                                   fontsize='x-small')
 
     n_plot_sil.set_xlabel('silent synapses')
-    # n_plot_sil.set_ylabel('probability density')
     n_plot_sil.set_xticks(np.arange(0, 50, 10))
     n_plot_sil.set_xlim([0, 50])
     n_plot_sil.set_ylim([0, 0.8])
-    # n_plot_sil.set_title('n: Silent', alpha = 0.5, loc = 'left')
     leg_s = n_plot_sil.legend(labels=(silent_truefrac_coarse * 100).astype(
         np.int),
                               title='silent (%)',
@@ -1092,7 +1089,8 @@ def plot_fig2(silent_fraction_low=0.1,
     max_n_silent = len(np.bincount(silent_syn_group_half))
 
     pr_nonsil = np.empty(max_n_nonsilent, dtype=np.ndarray)
-    n_pr_toplot = 500
+    pr_nonsil_mean = np.empty(max_n_nonsilent)
+    n_pr_toplot = 100
 
     # Plot mean release probability for each number of nonsilent/silent syns
     for syn_number in range(1, max_n_nonsilent):
@@ -1100,6 +1098,7 @@ def plot_fig2(silent_fraction_low=0.1,
             pr_nonsilent_syn_group_half.count(axis=1) == syn_number)
         pr_nonsil[syn_number] = np.ma.mean(
             pr_nonsilent_syn_group_half[inds_with_syn_number], axis=1)
+        pr_nonsil_mean[syn_number] = np.mean(pr_nonsil[syn_number])
 
         if pr_nonsil[syn_number] is not None:
             release_prob_nonsil.plot(
@@ -1110,6 +1109,9 @@ def plot_fig2(silent_fraction_low=0.1,
                 color=color_pr,
                 alpha=0.1,
                 markersize=1)
+            release_prob_nonsil.plot(
+                syn_number, pr_nonsil_mean[syn_number], '.',
+                color = color_pr, alpha=0.9, markersize=5)
 
     # Plot the subset composition vs superset composition for each position
     subset_fracsil = np.empty(len(silent_truefrac_coarse), dtype=np.ndarray)
@@ -1139,7 +1141,7 @@ def plot_fig2(silent_fraction_low=0.1,
                       '--k',
                       linewidth=0.5)
 
-    # Adjust plot features
+    # Adjust plot features 
     release_prob_nonsil.set_xlim([0, 8.3])
     release_prob_nonsil.set_ylim([0, 1])
     release_prob_nonsil.set_xticks(np.arange(0, 9, 2))
@@ -1152,7 +1154,7 @@ def plot_fig2(silent_fraction_low=0.1,
     subset_error.set_xticks([0, 0.5, 1])
     subset_error.set_yticks([0, 0.5, 1])
     subset_error.set_xlabel('frac. silent')
-    subset_error.set_ylabel('subset frac. sil.')
+    subset_error.set_ylabel('sampled frac. sil.')
 
     # -------------------
     # 1: Plot example synapse groups and example traces
@@ -1359,7 +1361,7 @@ def plot_fig2(silent_fraction_low=0.1,
     ax_bias.plot(silent_truefrac_fine * 100,
                  bias_no_z * 100,
                  color=[0.5, 0.5, 0.5])
-    ax_bias.legend(labels=['FRA', 'FRA (neg.)'], title='estimator')
+    ax_bias.legend(labels=['FRA', 'zeroed FRA'], title='estimator')
     ax_bias.set_xlabel('ground truth silent (%)')
     ax_bias.set_ylabel('estimator bias (%)')
     ax_bias.set_ylim([0, ax_bias.get_ylim()[1]])
@@ -1374,7 +1376,7 @@ def plot_fig2(silent_fraction_low=0.1,
         stdev_no_z[ind] = np.std(fra_calc[ind] * 100)
     ax_var.plot(silent_truefrac_fine * 100, stdev, color=[0, 0, 0])
     ax_var.plot(silent_truefrac_fine * 100, stdev_no_z, color=[0.5, 0.5, 0.5])
-    ax_var.legend(labels=['FRA', 'FRA (neg.)'], title='estimator')
+    ax_var.legend(labels=['FRA', 'zeroed FRA'], title='estimator')
     ax_var.set_xlabel('ground truth silent (%)')
     ax_var.set_ylabel('estimator std (%)')
     ax_var.set_ylim([0, ax_var.get_ylim()[1]])
@@ -1395,7 +1397,7 @@ def plot_fig2(silent_fraction_low=0.1,
 
 # ** fig4:
 def plot_fig4(n_true_silents=26,
-              fontsize=12,
+              fontsize=8,
               sample_draws=5000,
               figname='Fig4.pdf'):
     '''
@@ -1403,36 +1405,42 @@ def plot_fig4(n_true_silents=26,
 
     '''
 
-    # ---------------------------------------
+    ##########################################################
     # 1. Simulations
-    # ---------------------------------------
+    ##########################################################
     ##
     # Uncomment code for within-function segment running and troubleshootings
-    n_true_silents = 10
-    fontsize = 12
-    sample_draws = 1000
+    n_true_silents = 26
+    fontsize = 8
+    sample_draws = 5000
     figname = 'Fig4.pdf'
 
+    # ----------------------------------------------
+    # Monte Carlo simulations for minsamples
+    # ----------------------------------------------
     silent_truefrac = np.linspace(0, 0.5, num=n_true_silents)
     fra_calc = np.empty(len(silent_truefrac), dtype=np.ndarray)
     binary_calc = np.empty_like(fra_calc)
 
     # Set up multiple conditions
-    conditions = ['base', 'c10', 'c20', 'binary', 'h0_mle',  'llr_mle', 'llr_binary']
+    condlist = ['base', 'binary', 'c10', 'c20',
+                'h0_fra', 'h0_binary', 'h0_llr_framle', 'h0_llr_binary']
+    condlist_discrim = condlist[0:4]
+    condlist_h0 = condlist[4:]
 
     # Set parameters for each condition
-    conds_beta = {cond: 0.2 for cond in conditions}
+    conds_beta = {cond: 0.2 for cond in condlist}
 
-    conds_ctrl_n = {cond: False for cond in conditions}
+    conds_ctrl_n = {cond: False for cond in condlist}
     conds_ctrl_n['c10'] = 10
     conds_ctrl_n['c20'] = 20
 
     mins_templ = np.empty((len(silent_truefrac), len(silent_truefrac)))
     mins_1d_templ = np.empty((len(silent_truefrac)))
 
-    minsamples = {cond: mins_templ.copy() for cond in conditions[0:4]}
-    for cond in conditions[5:]:
-        minsamples[cond] = mins_1d_templ.copy()  # Set minsamples
+    minsamples = {cond: mins_templ.copy() for cond in condlist_discrim}
+    for cond in condlist_h0:  # cases for hypothesis testing (h0 compar)
+        minsamples[cond] = mins_1d_templ.copy()
 
     print('Generating FRA calcs...')
     # Generate FRA calcs and calc simple minsamples versus baseline
@@ -1440,22 +1448,22 @@ def plot_fig4(n_true_silents=26,
         # Generate an FRA dist
         fra_calc[ind] = gen_fra_dist(n_simulations=10000,
                                      silent_fraction=silent,
-                                     zeroing=True,
+                                     zeroing=False,
                                      unitary_reduction=False,
                                      frac_reduction=0.2)
 
         binary_calc[ind] = gen_fra_dist(n_simulations=10000,
                                         silent_fraction=silent,
-                                        zeroing=True,
+                                        zeroing=False,
                                         unitary_reduction=False,
                                         frac_reduction=0.2,
                                         binary_vals=True)
 
     # Set up guesses for each condition to start at
-    guess = {cond: int(2048) for cond in conditions}
+    guess = {cond: int(2048) for cond in condlist}
 
-    # ------------------
-    # Minsamples 1: Standard FRA with numerical sims
+    # ----------------------------------
+    # Minsamples[discrim.]: Standard FRA with numerical sims
     for ind1_sil, sil1 in enumerate(silent_truefrac):
         for ind2_sil, sil2 in enumerate(silent_truefrac):
 
@@ -1463,8 +1471,8 @@ def plot_fig4(n_true_silents=26,
             if ind2_sil > ind1_sil:
                 print('\nsil_1 ' + str(sil1) + '; sil_2 ' + str(sil2))
 
-                # Iterate through all conditions
-                for cond in conditions[0:4]:
+                # Iterate through all conditions with discrimin.
+                for cond in condlist_discrim:
                     print('\n\tcond: ' + str(cond))
 
                     # Update guesses
@@ -1478,7 +1486,7 @@ def plot_fig4(n_true_silents=26,
                         guess[cond] = np.int(2**(exp_2))
 
                     # Calculate minsamples based on cond
-                    if cond is 'binary':
+                    if cond == 'binary':
                         minsamples[cond][ind1_sil, ind2_sil] = power_analysis(
                             binary_calc[ind1_sil],
                             binary_calc[ind2_sil],
@@ -1504,58 +1512,71 @@ def plot_fig4(n_true_silents=26,
 
                 # Set same-same comparisons to arbitrarily high val
             elif ind2_sil == ind1_sil:
-                for cond in conditions[0:4]:
+                for cond in condlist[0:4]:
                     minsamples[cond][ind1_sil, ind2_sil] = np.int(2048)
-    # -----------------
-    # Minsamples 2: LLR/Wilke's statistical test
 
+    # ----------------------------------
+    # Minsamples[h0_llr]: LLR/Wilke's statistical test
+
+    # ----- fra-mle using llr
     # Create likelihood function for each possible observation
     step = 0.01
     obs = np.arange(-2, 1 + 2 * step, step)  # Bin observations from -200:100
     likelihood = np.empty([len(obs), len(silent_truefrac)])
     for ind_obs, obs_ in enumerate(obs):
         for ind_hyp, hyp_ in enumerate(silent_truefrac):
-            # obs_in_range = np.where(np.logical_and(
-            #     fra_calc[ind_hyp] < obs_ + step/2, fra_calc[ind_hyp] > obs_ - step/2))[0]
             obs_in_range = np.where(
                 np.abs(fra_calc[ind_hyp] - obs_) < step / 2)[0]
             p_obs = len(obs_in_range) / len(fra_calc[ind_hyp])
             likelihood[ind_obs, ind_hyp] = p_obs
     likelihood += 0.0001  # Set likelihoods away from 0 to avoid log(0) errors
-    # Minsamples for the failure-rate analysis
+
+    # Minsample calculation
+    _cond = 'h0_llr_framle'
     for ind_sil, sil in enumerate(silent_truefrac):
         print('\nsil ' + str(sil))
-        # Iterate through all conditions
-        for cond in conditions[5:7]:
-            if cond is not 'llr_binary':
-                print('\tcond ' + str(cond))
-                # Update guesses
-                if guess[cond] == 2048:
-                    guess[cond] = np.int(2048)
-                else:
-                    # Ctrl group
-                    exp_2 = np.ceil(
-                        np.log(minsamples[cond][ind_sil - 1]) / np.log(2))
-                    guess[cond] = np.int(2**(exp_2))
 
-                # Calculate minsamples
-                minsamples[cond][ind_sil] = power_analysis_llr(
-                    fra_calc[ind_sil],
-                    likelihood,
-                    init_guess=guess[cond],
-                    beta=conds_beta[cond],
-                    sample_draws=sample_draws)
+        # Calc best guess based on last iter.
+        if guess[_cond] == 2048:
+            guess[_cond] = np.int(2048)
+        else:
+            exp_2 = np.ceil(
+                np.log(minsamples[_cond][ind_sil - 1]) / np.log(2))
+            guess[_cond] = np.int(2**(exp_2))
 
-                guess[cond] = minsamples[cond][ind_sil]
+        # Calculate minsamples
+        minsamples[_cond][ind_sil] = power_analysis_llr(
+            fra_calc[ind_sil],
+            likelihood,
+            init_guess=guess[_cond],
+            beta=conds_beta[_cond],
+            sample_draws=sample_draws)
 
-    # Lastly, update binary condition with analytical solution
+        guess[_cond] = minsamples[_cond][ind_sil]  # update guess
+
+    # ----- binary using llr
+    #  analytical solution
     silent_truefrac_nozeroes = silent_truefrac + 1 / 10000  # Move away from 0
-    minsamples['llr_binary'] = np.log(conds_beta['llr_binary']) \
+    minsamples['h0_llr_binary'] = np.log(conds_beta['h0_llr_binary']) \
         / (np.log(1-silent_truefrac_nozeroes))
 
-    # -----------------
-    # Calc discriminability
+    # ----------------------------------
+    # Minsamples[h0]: Monte Carlo simulation for H0 vs Ha (no model)
+    _conds = ['h0_fra', 'h0_binary']
+    _matchconds = ['base', 'binary']
 
+    h0_nsamples_templ = np.empty_like(silent_truefrac, dtype=np.ndarray)
+    h0_nsamples = {cond: h0_nsamples_templ.copy()
+                   for cond in _conds}
+
+    for ind_sil, sil in enumerate(silent_truefrac):
+        for ind_c, cond in enumerate(_conds):
+            m_cond = _matchconds[ind_c]
+            minsamples[cond][ind_sil] = minsamples[m_cond][0, ind_sil]
+
+    # ----------------------------------------------
+    # Discriminability analysis on sims
+    # ----------------------------------------------
     # Initialize vars
     discrim_dsilent = silent_truefrac
 
@@ -1563,32 +1584,20 @@ def plot_fig4(n_true_silents=26,
     discrim_nsamp_mean_templ = np.empty_like(silent_truefrac)
     discrim_nsamp_std_templ = np.empty_like(silent_truefrac)
 
-    discrim_nsamples = {
-        cond: discrim_nsamples_templ.copy()
-        for cond in conditions
-    }
-    discrim_nsamp_mean = {
-        cond: discrim_nsamp_mean_templ.copy()
-        for cond in conditions
-    }
-    discrim_nsamp_std = {
-        cond: discrim_nsamp_std_templ.copy()
-        for cond in conditions
-    }
+    discrim_nsamples = {cond: discrim_nsamples_templ.copy()
+                        for cond in condlist}
+    discrim_nsamp_mean = {cond: discrim_nsamp_mean_templ.copy()
+                          for cond in condlist}
+    discrim_nsamp_std = {cond: discrim_nsamp_std_templ.copy()
+                         for cond in condlist}
 
     # Store coords of each discrim value
-    discrim_xax_coords = {
-        cond: discrim_nsamples_templ.copy()
-        for cond in conditions
-    }
-    discrim_yax_coords = {
-        cond: discrim_nsamples_templ.copy()
-        for cond in conditions
-    }
-    discrim_zax_coords = {
-        cond: discrim_nsamples_templ.copy()
-        for cond in conditions
-    }
+    discrim_xax_coords = {cond: discrim_nsamples_templ.copy()
+                          for cond in condlist}
+    discrim_yax_coords = {cond: discrim_nsamples_templ.copy()
+                          for cond in condlist}
+    discrim_zax_coords = {cond: discrim_nsamples_templ.copy()
+                          for cond in condlist}
 
     # Xaxis and Yaxis storages for 3d plots
     xax_3d = np.empty_like(mins_templ)
@@ -1602,7 +1611,7 @@ def plot_fig4(n_true_silents=26,
             xax_3d[ind1_sil, ind2_sil] = sil1
             yax_3d[ind1_sil, ind2_sil] = sil2
 
-            for cond in conditions[0:4]:
+            for cond in condlist_discrim:
                 # Calculate difference in silents;
                 # and find corresp val in discrim_dsilent
                 diff_silent_ = np.abs(sil1 - sil2)
@@ -1638,57 +1647,41 @@ def plot_fig4(n_true_silents=26,
 
     # Calculate the mean and stdev for each cond
     for ind_discrim, dsil in enumerate(discrim_dsilent):
-        for cond in conditions[0:4]:
+        for cond in condlist_discrim:
             discrim_nsamp_mean[cond][ind_discrim] = np.mean(
                 discrim_nsamples[cond][ind_discrim])
             discrim_nsamp_std[cond][ind_discrim] = np.std(
                 discrim_nsamples[cond][ind_discrim])
 
-    ##
+
     ###########################################################################
     # 2. Make figure
     ###########################################################################
     plt.style.use('publication_pnas_ml')
-    _lw = 1  # universal linewidth argument passed to each plot
+    lw_ = 1  # universal linewidth argument passed to each plot
 
     fig = plt.figure(constrained_layout=True)
     fig.set_figheight(4.5)
     fig.set_figwidth(3.43)
-    plt.rc('font', size=6)
+    plt.rc('font', size=fontsize)
 
     # Define spec for entire fig
-    spec_all = gridspec.GridSpec(nrows=3,
+    spec_all = gridspec.GridSpec(nrows=2,
                                  ncols=2,
-                                 height_ratios=[1.5, 1, 1],
-                                 width_ratios=[1, 2],
-                                 figure=fig)
-
-    # Spec for top right
-    spec_top = gridspec.GridSpecFromSubplotSpec(1,
-                                                2,
-                                                subplot_spec=spec_all[0, 1],
-                                                wspace=0.3,
-                                                hspace=0.5,
-                                                width_ratios=[2, 1])
-
-    spec_middle = gridspec.GridSpecFromSubplotSpec(1,
-                                                   2,
-                                                   subplot_spec=spec_all[1, 1],
-                                                   wspace=0.3,
-                                                   hspace=0.5)
-    # Spec for bottom right
-    spec_bottom = gridspec.GridSpecFromSubplotSpec(1,
-                                                   2,
-                                                   subplot_spec=spec_all[2, 1],
-                                                   wspace=0.4,
-                                                   hspace=0.5)
+                                 height_ratios=[1, 1],
+                                 width_ratios=[1, 1],
+                                 figure=fig, wspace=0.3,
+                                 hspace=0.5)
 
     # Define colors to be used
-    color_1 = np.array([0.25, 0.55, 0.18])
+    # color_1 = np.array([0.25, 0.55, 0.18])
+    color_fra_palette = sns.diverging_palette(130, 30, l=45, s=90,
+                                      center="dark", as_cmap=True)
+    color_fra = color_fra_palette(0.1)
 
     # ---------------------------
-    # Top right: 3d plot and histograph
-    subp_3d = fig.add_subplot(spec_top[0, :], projection='3d')
+    # Top left: 3d plot and histograph
+    subp_3d = fig.add_subplot(spec_all[0, 0], projection='3d')
     surf = subp_3d.plot_surface(xax_3d * 100,
                                 yax_3d * 100,
                                 minsamples['base'].clip(max=100, min=0),
@@ -1703,7 +1696,7 @@ def plot_fig4(n_true_silents=26,
     subp_3d.set_ylabel('true silent (%)')
     subp_3d.set_zlabel('min samples')
     # subp_3d.tick_params(labelsize = small_textsize)
-    subp_3d.view_init(elev=20, azim=-60)
+    subp_3d.view_init(elev=30, azim=120)
     subp_3d.set_title('Power analysis',
                       alpha=0.5,
                       fontweight='bold',
@@ -1712,7 +1705,7 @@ def plot_fig4(n_true_silents=26,
     # Histogram subplot: First, calculate where discrim is 0.1, 0.2, 0.3
     discrims = [0.1, 0.2, 0.3]
     color_d = [[0, 0.2, 0.1], [0, 0.4, 0.2], [0, 0.6, 0.3]]
-    alpha_d = [0.65, 0.5, 0.35]
+    alpha_d = [1, 1, 1]
 
     # subp_3d_extra = fig.add_subplot(spec_top[0, 1])
     for ind, discrim in enumerate(discrims):
@@ -1725,195 +1718,45 @@ def plot_fig4(n_true_silents=26,
                      np.clip(discrim_zax_coords['base'][ind_disc], 0, 100),
                      color=color_d[ind],
                      alpha=alpha_d[ind],
-                     linewidth=3)
-
-    #     #Plot histograms on subp_3d_extra
-    #     subp_3d_extra.hist(discrim_nsamples['base'][ind_disc],
-    #                        bins = np.logspace(np.log10(10),np.log10(1000), 25),
-    #                        weights = (np.ones_like(
-    #                                discrim_nsamples['base'][ind_disc])
-    #                                / len(discrim_nsamples['base'][ind_disc])),
-    #                        color = color_d[ind], alpha = alpha_d[ind],
-    #                        histtype='step', linewidth = _lw)
-
-    # subp_3d_extra.legend(labels = ['10', '20', '30'], title = '$\Delta$ silent (%)',
-    #                      frameon = False)
-    # subp_3d_extra.spines['right'].set_visible(False)
-    # subp_3d_extra.spines['top'].set_visible(False)
-    # subp_3d_extra.yaxis.set_ticks_position('left')
-    # subp_3d_extra.xaxis.set_ticks_position('bottom')
-    # subp_3d_extra.set_ylim([0, 0.6])
-    # subp_3d_extra.set_xscale("log")
-    # subp_3d_extra.set_xlim([0, 10 ** 3])
-    # subp_3d_extra.set_yticks([0, 0.3, 0.6])
-    # subp_3d_extra.set_xlabel('minimum samples')
-    # subp_3d_extra.set_ylabel('probability density')
-    # subp_3d_extra.set_title('Discriminability \ndistributions',
-    #                         alpha = 0.5, fontweight = 'bold', loc = 'left')
-
-    # ---------------------------
-    # Middle right: Power analysis curves
-
-    # First curve: basic power analysis
-    subp_base = fig.add_subplot(spec_middle[0, 0])
-
-    subp_base.plot(discrim_dsilent * 100,
-                   discrim_nsamp_mean['base'],
-                   color=color_1,
-                   alpha=0.6,
-                   linewidth=_lw)
-    subp_base.fill_between(
-        discrim_dsilent * 100,
-        discrim_nsamp_mean['base'] + discrim_nsamp_std['base'],
-        discrim_nsamp_mean['base'] - discrim_nsamp_std['base'],
-        facecolor=color_1,
-        alpha=0.1)
-    subp_base.spines['right'].set_visible(False)
-    subp_base.spines['top'].set_visible(False)
-    subp_base.yaxis.set_ticks_position('left')
-    subp_base.xaxis.set_ticks_position('bottom')
-    subp_base.set_xlim([0, 50])
-    subp_base.set_ylim([0, 1024])
-    subp_base.set_xticks([0, 10, 20, 30, 40, 50])
-    subp_base.set_yticks([0, 256, 512, 768, 1024])
-    subp_base.set_xlabel('Detectable $\Delta$ silent (%)')
-    subp_base.set_ylabel('minimum samples required')
-    subp_base.set_title('Discriminability',
-                        alpha=0.5,
-                        fontweight='bold',
-                        loc='left')
-
-    subp_base_inset = inset_axes(subp_base, width='60%', height='70%', loc=1)
-    subp_base_inset.plot(discrim_dsilent * 100,
-                         discrim_nsamp_mean['base'],
-                         color=color_1,
-                         alpha=0.6,
-                         linewidth=_lw)
-    subp_base_inset.fill_between(
-        discrim_dsilent * 100,
-        discrim_nsamp_mean['base'] + discrim_nsamp_std['base'],
-        discrim_nsamp_mean['base'] - discrim_nsamp_std['base'],
-        facecolor=color_1,
-        alpha=0.1)
-    subp_base_inset.spines['right'].set_visible(False)
-    subp_base_inset.spines['top'].set_visible(False)
-    subp_base_inset.yaxis.set_ticks_position('left')
-    subp_base_inset.xaxis.set_ticks_position('bottom')
-    subp_base_inset.set_xlim([15, 50])
-    subp_base_inset.set_ylim([0, 50])
-    subp_base_inset.set_xticks([15, 30, 45])
-    subp_base_inset.set_yticks([0, 10, 20, 30, 40, 50])
-    # subp_base_inset.tick_params(labelsize = xsmall_textsize)
-    mark_inset(subp_base,
-               subp_base_inset,
-               loc1=3,
-               loc2=4,
-               fc="none",
-               ec="0.5",
-               ls=':',
-               lw=2)
+                     linewidth=2)
 
     # -----------------------------------------------
-    # Second curve: power analysis with changes in control group
-    subp_ctrln = fig.add_subplot(spec_middle[0, 1])
-
-    color_n10 = [0.5, 0.2, 0.3]
-    color_n20 = [0.8, 0.1, 0.2]
-
-    base_ = subp_ctrln.plot(discrim_dsilent * 100,
-                            discrim_nsamp_mean['base'],
-                            color=color_1,
-                            alpha=0.6,
-                            linewidth=_lw)
-    subp_ctrln.fill_between(
-        discrim_dsilent * 100,
-        discrim_nsamp_mean['base'] + discrim_nsamp_std['base'],
-        discrim_nsamp_mean['base'] - discrim_nsamp_std['base'],
-        facecolor=color_1,
-        alpha=0.1)
-
-    n10 = subp_ctrln.plot(discrim_dsilent * 100,
-                          discrim_nsamp_mean['c10'],
-                          color=color_n10,
-                          alpha=0.6,
-                          linewidth=_lw)
-    subp_ctrln.fill_between(
-        discrim_dsilent * 100,
-        discrim_nsamp_mean['c10'] + discrim_nsamp_std['c10'],
-        discrim_nsamp_mean['c10'] - discrim_nsamp_std['c10'],
-        facecolor=color_n10,
-        alpha=0.1)
-
-    n20 = subp_ctrln.plot(discrim_dsilent * 100,
-                          discrim_nsamp_mean['c20'],
-                          color=color_n20,
-                          alpha=0.6,
-                          linewidth=_lw)
-    subp_ctrln.fill_between(
-        discrim_dsilent * 100,
-        discrim_nsamp_mean['c20'] + discrim_nsamp_std['c20'],
-        discrim_nsamp_mean['c20'] - discrim_nsamp_std['c20'],
-        facecolor=color_n20,
-        alpha=0.1)
-    subp_ctrln.legend([base_[-1], n10[-1], n20[-1]], ['exp n', '10', '20'],
-                      title='control n',
-                      frameon=False,
-                      loc=1)
-    subp_ctrln.spines['right'].set_visible(False)
-    subp_ctrln.spines['top'].set_visible(False)
-    subp_ctrln.yaxis.set_ticks_position('left')
-    subp_ctrln.xaxis.set_ticks_position('bottom')
-    subp_ctrln.set_xlim([0, 50])
-    subp_ctrln.set_ylim([0, 1024])
-    subp_ctrln.set_xticks([0, 10, 20, 30, 40, 50])
-    subp_ctrln.set_yticks([0, 256, 512, 768, 1024])
-    subp_ctrln.set_xlabel('Detectable $\Delta$ silent (%)')
-    subp_ctrln.set_ylabel('minimum samples required')
-    subp_ctrln.set_title('Discriminability: \n$\Delta$ ctrl n',
-                         alpha=0.5,
-                         fontweight='bold',
-                         loc='left')
-
-    # -----------------------------------------------
-    # Third curve: power analysis with binary discriminability
-    subp_binary = fig.add_subplot(spec_bottom[0, 0])
+    # Top right: FRA vs binary | discriminability
+    subp_binary = fig.add_subplot(spec_all[0, 1])
 
     color_binary = [0.2, 0.2, 0.2]
 
     base_ = subp_binary.plot(discrim_dsilent * 100,
                              discrim_nsamp_mean['base'],
-                             color=color_1,
-                             alpha=0.6,
-                             linewidth=_lw)
+                             color=color_fra,
+                             alpha=0.9,
+                             linewidth=lw_)
     subp_binary.fill_between(
         discrim_dsilent * 100,
         discrim_nsamp_mean['base'] + discrim_nsamp_std['base'],
         discrim_nsamp_mean['base'] - discrim_nsamp_std['base'],
-        facecolor=color_1,
+        facecolor=color_fra,
         alpha=0.1)
 
     binary = subp_binary.plot(discrim_dsilent * 100,
                               discrim_nsamp_mean['binary'],
                               color=color_binary,
-                              alpha=0.6,
-                              linewidth=_lw)
+                              alpha=0.9,
+                              linewidth=lw_)
     subp_binary.fill_between(
         discrim_dsilent * 100,
         discrim_nsamp_mean['binary'] + discrim_nsamp_std['binary'],
         discrim_nsamp_mean['binary'] - discrim_nsamp_std['binary'],
         facecolor=color_binary,
         alpha=0.1)
-    subp_binary.spines['right'].set_visible(False)
-    subp_binary.spines['top'].set_visible(False)
-    subp_binary.yaxis.set_ticks_position('left')
-    subp_binary.xaxis.set_ticks_position('bottom')
+
     subp_binary.set_xlim([0, 50])
     subp_binary.set_ylim([0, 1024])
     subp_binary.set_xticks([0, 10, 20, 30, 40, 50])
     subp_binary.set_yticks([0, 256, 512, 768, 1024])
     subp_binary.set_xlabel('Detectable $\Delta$ silent (%)')
     subp_binary.set_ylabel('minimum samples required')
-    subp_binary.set_title('Discriminability: \n$\Delta$ ctrl n',
+    subp_binary.set_title('Discriminability',
                           alpha=0.5,
                           fontweight='bold',
                           loc='left')
@@ -1924,27 +1767,27 @@ def plot_fig4(n_true_silents=26,
                                    loc=1)
     base_ = subp_binary_inset.plot(discrim_dsilent * 100,
                                    discrim_nsamp_mean['base'],
-                                   color=color_1,
-                                   alpha=0.6,
-                                   linewidth=_lw)
+                                   color=color_fra,
+                                   alpha=0.9,
+                                   linewidth=lw_)
     subp_binary_inset.fill_between(
         discrim_dsilent * 100,
         discrim_nsamp_mean['base'] + discrim_nsamp_std['base'],
         discrim_nsamp_mean['base'] - discrim_nsamp_std['base'],
-        facecolor=color_1,
+        facecolor=color_fra,
         alpha=0.1)
     b02_ = subp_binary_inset.plot(discrim_dsilent * 100,
                                   discrim_nsamp_mean['binary'],
                                   color=color_binary,
-                                  alpha=0.6,
-                                  linewidth=_lw)
+                                  alpha=0.9,
+                                  linewidth=lw_)
     subp_binary_inset.fill_between(
         discrim_dsilent * 100,
         discrim_nsamp_mean['binary'] + discrim_nsamp_std['binary'],
         discrim_nsamp_mean['binary'] - discrim_nsamp_std['binary'],
         facecolor=color_binary,
         alpha=0.1)
-    subp_binary_inset.legend([base_[-1], binary[-1]], ['FRA', 'binary'],
+    subp_binary_inset.legend([base_[-1], binary[-1]], ['fra', 'binary'],
                              frameon=False,
                              loc=1)
     subp_binary_inset.spines['right'].set_visible(False)
@@ -1952,81 +1795,151 @@ def plot_fig4(n_true_silents=26,
     subp_binary_inset.yaxis.set_ticks_position('left')
     subp_binary_inset.xaxis.set_ticks_position('bottom')
     subp_binary_inset.set_xlim([15, 50])
-    subp_binary_inset.set_ylim([0, 200])
+    subp_binary_inset.set_ylim([0, 130])
     subp_binary_inset.set_xticks([15, 30, 45])
-    subp_binary_inset.set_yticks([0, 50, 100, 150, 200])
+    subp_binary_inset.set_yticks([0, 30, 60, 90, 120])
     # subp_binary_inset.tick_params(labelsize = xsmall_textsize)
     mark_inset(subp_binary,
                subp_binary_inset,
                loc1=3,
                loc2=4,
                fc="none",
-               ec="0.5",
-               ls=':',
-               lw=2)
+               ec="0.6",
+               ls='--',
+               lw=1)
 
     # -----------------------------------------------
-    # Fourth curve: power analysis with binary discriminability
-    subp_llr = fig.add_subplot(spec_bottom[0, 1])
+    # Bottom left: power analysis with changes in control group
+    subp_ctrln = fig.add_subplot(spec_all[1, 0])
 
-    color_llr = [0.2, 0.2, 0.2]
+    colors_nchange = sns.diverging_palette(140, 50, l=60, s=90,
+                                           center='light', n=8)
 
-    llr_base = subp_llr.plot(silent_truefrac * 100,
-                             minsamples['llr_mle'],
-                             color=color_1,
-                             alpha=0.6,
-                             linewidth=_lw)
-    llr_binary = subp_llr.plot(silent_truefrac * 100,
-                               minsamples['llr_binary'],
-                               color=color_binary,
-                               alpha=0.6,
-                               linewidth=_lw)
-    subp_llr.spines['right'].set_visible(False)
-    subp_llr.spines['top'].set_visible(False)
-    subp_llr.yaxis.set_ticks_position('left')
-    subp_llr.xaxis.set_ticks_position('bottom')
+    color_n10 = colors_nchange[5]
+    color_n20 = colors_nchange[7]
+
+    base_ = subp_ctrln.plot(discrim_dsilent * 100,
+                            discrim_nsamp_mean['base'],
+                            color=color_fra,
+                            alpha=0.9,
+                            linewidth=lw_)
+    subp_ctrln.fill_between(
+        discrim_dsilent * 100,
+        discrim_nsamp_mean['base'] + discrim_nsamp_std['base'],
+        discrim_nsamp_mean['base'] - discrim_nsamp_std['base'],
+        facecolor=color_fra,
+        alpha=0.1)
+
+    n10 = subp_ctrln.plot(discrim_dsilent * 100,
+                          discrim_nsamp_mean['c10'],
+                          color=color_n10,
+                          alpha=0.9,
+                          linewidth=lw_)
+    subp_ctrln.fill_between(
+        discrim_dsilent * 100,
+        discrim_nsamp_mean['c10'] + discrim_nsamp_std['c10'],
+        discrim_nsamp_mean['c10'] - discrim_nsamp_std['c10'],
+        facecolor=color_n10,
+        alpha=0.1)
+
+    n20 = subp_ctrln.plot(discrim_dsilent * 100,
+                          discrim_nsamp_mean['c20'],
+                          color=color_n20,
+                          alpha=0.9,
+                          linewidth=lw_)
+    subp_ctrln.fill_between(
+        discrim_dsilent * 100,
+        discrim_nsamp_mean['c20'] + discrim_nsamp_std['c20'],
+        discrim_nsamp_mean['c20'] - discrim_nsamp_std['c20'],
+        facecolor=color_n20,
+        alpha=0.1)
+    subp_ctrln.legend([base_[-1], n10[-1], n20[-1]], ['matched', '10', '20'],
+                      title='$n_{ctrl}=$',
+                      frameon=False,
+                      loc=1)
+
+    subp_ctrln.set_xlim([0, 50])
+    subp_ctrln.set_ylim([0, 1024])
+    subp_ctrln.set_xticks([0, 10, 20, 30, 40, 50])
+    subp_ctrln.set_yticks([0, 256, 512, 768, 1024])
+    subp_ctrln.set_xlabel('Detectable $\Delta$ silent (%)')
+    subp_ctrln.set_ylabel('minimum samples required')
+    subp_ctrln.set_title('ctrl n',
+                         alpha=0.5,
+                         fontweight='bold',
+                         loc='left')
+
+    # -----------------------------------------------
+    # Bottom right: Hypothesis testing
+    # (FRA vs bin {discrim} | FRA-MLE vs bin {Ha vs H0})
+    subp_llr = fig.add_subplot(spec_all[1, 1])
+    # plot
+    line_llr_framle = subp_llr.plot(silent_truefrac * 100,
+                                    minsamples['h0_llr_framle'],
+                                    color=cm_(0),
+                                    alpha=0.9,
+                                    linewidth=lw_)
+    line_llr_bin = subp_llr.plot(silent_truefrac * 100,
+                                 minsamples['h0_llr_binary'],
+                                 color=cm_(0.95),
+                                 alpha=0.9,
+                                 linewidth=lw_)
+    line_fra = subp_llr.plot(silent_truefrac * 100,
+                             minsamples['h0_fra'],
+                             color=color_fra,
+                             alpha=0.9, linewidth=lw_)
+    line_bin = subp_llr.plot(silent_truefrac * 100,
+                             minsamples['h0_binary'],
+                             color=color_binary,
+                             alpha=0.9, linewidth=lw_)
+
     subp_llr.set_xlim([0, 50])
     subp_llr.set_ylim([0, 128])
     subp_llr.set_xticks([0, 10, 20, 30, 40, 50])
     subp_llr.set_yticks([0, 32, 64, 96, 128])
     subp_llr.set_xlabel('silent synapses (%)')
     subp_llr.set_ylabel('minimum samples required')
-    subp_llr.set_title('Log-likelihood \nratio vs null',
+    subp_llr.set_title('Null hypothesis test',
                        alpha=0.5,
                        fontweight='bold',
                        loc='left')
 
-    subp_llr_inset = inset_axes(subp_llr, width='60%', height='70%', loc=1)
-    llr_base_inset = subp_llr_inset.plot(silent_truefrac * 100,
-                                         minsamples['llr_mle'],
-                                         color=color_1,
-                                         alpha=0.6,
-                                         linewidth=_lw)
-    llr_binary_inset = subp_llr_inset.plot(silent_truefrac * 100,
-                                           minsamples['llr_binary'],
-                                           color=color_binary,
-                                           alpha=0.6,
-                                           linewidth=_lw)
+    subp_llr_inset = inset_axes(subp_llr, width='60%', height='60%', loc=1)
+    insline_llr_fmle = subp_llr_inset.plot(silent_truefrac * 100,
+                                           minsamples['h0_llr_framle'],
+                                           color=cm_(0),
+                                           alpha=0.9,
+                                           linewidth=lw_)
+    insline_llr_bin = subp_llr_inset.plot(silent_truefrac * 100,
+                                          minsamples['h0_llr_binary'],
+                                          color=cm_(0.95),
+                                          alpha=0.9,
+                                          linewidth=lw_)
+    insline_fra = subp_llr_inset.plot(silent_truefrac * 100,
+                                      minsamples['h0_fra'],
+                                      color=color_fra,
+                                      alpha=0.9, linewidth=lw_)
+    insline_bin = subp_llr_inset.plot(silent_truefrac * 100,
+                                      minsamples['h0_binary'],
+                                      color=color_binary,
+                                      alpha=0.9, linewidth=lw_)
 
-    subp_llr_inset.spines['right'].set_visible(False)
-    subp_llr_inset.spines['top'].set_visible(False)
-    subp_llr_inset.yaxis.set_ticks_position('left')
-    subp_llr_inset.xaxis.set_ticks_position('bottom')
     subp_llr_inset.set_xlim([15, 50])
-    subp_llr_inset.set_ylim([0, 10])
+    subp_llr_inset.set_ylim([0, 30])
     subp_llr_inset.set_xticks([15, 30, 45])
-    subp_llr_inset.set_yticks([0, 5, 10])
-    subp_llr_inset.legend([llr_base_inset, llr_binary_inset],
-                          ['FRA-MLE', 'binary'],
+    subp_llr_inset.set_yticks([0, 5, 10, 15, 20, 25, 30])
+    subp_llr_inset.legend([insline_fra[-1], insline_bin[-1],
+                           insline_llr_fmle[-1], insline_llr_bin[-1]],
+                          ['fra', 'binary', 'fra-mle (llr)', 'binary (llr)'],
                           frameon=False)
     mark_inset(subp_llr,
                subp_llr_inset,
                loc1=3,
                loc2=4,
                fc="none",
-               ec="0.5",
-               ls=':',
-               lw=2)
+               ec="0.6",
+               ls='--',
+               lw=1)
 
     # ---------------------------------
     # Set tight layout and save
@@ -2041,7 +1954,7 @@ def plot_fig4(n_true_silents=26,
     path_f = os.path.join(path, figname)
 
     plt.savefig(path_f, bbox_inches='tight')
-    ##
+
     return
 
 
@@ -2208,7 +2121,7 @@ def plot_fig4_suppLLR(n_true_silents=100,
                    minsamples['base'],
                    color=color_1,
                    alpha=0.6,
-                   linewidth=_lw)
+                   linewidth=lw_)
     subp_base.spines['right'].set_visible(False)
     subp_base.spines['top'].set_visible(False)
     subp_base.yaxis.set_ticks_position('left')
@@ -2229,7 +2142,7 @@ def plot_fig4_suppLLR(n_true_silents=100,
                          minsamples['base'],
                          color=color_1,
                          alpha=0.6,
-                         linewidth=_lw)
+                         linewidth=lw_)
     subp_base_inset.spines['right'].set_visible(False)
     subp_base_inset.spines['top'].set_visible(False)
     subp_base_inset.yaxis.set_ticks_position('left')
@@ -2258,12 +2171,12 @@ def plot_fig4_suppLLR(n_true_silents=100,
                              minsamples['base'],
                              color=color_1,
                              alpha=0.6,
-                             linewidth=_lw)
+                             linewidth=lw_)
     binary = subp_binary.plot(silent_truefrac * 100,
                               minsamples['binary'],
                               color=color_binary,
                               alpha=0.6,
-                              linewidth=_lw)
+                              linewidth=lw_)
     subp_binary.legend([base_[-1], binary[-1]],
                        ['failure-rate', 'binary class.'],
                        title='technique',
@@ -2293,12 +2206,12 @@ def plot_fig4_suppLLR(n_true_silents=100,
                                    minsamples['base'],
                                    color=color_1,
                                    alpha=0.6,
-                                   linewidth=_lw)
+                                   linewidth=lw_)
     b02_ = subp_binary_inset.plot(silent_truefrac * 100,
                                   minsamples['binary'],
                                   color=color_binary,
                                   alpha=0.6,
-                                  linewidth=_lw)
+                                  linewidth=lw_)
     subp_binary_inset.legend([base_[-1], binary[-1]],
                              ['failure-rate', 'binary class.'],
                              title='technique',
