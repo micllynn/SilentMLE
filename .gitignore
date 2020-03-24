@@ -1,5 +1,5 @@
-.DS_Store
-*.pdf
+*
+!*.py
 test.py
-silentmle/__pycache__/
-silentmle/figs
+!.gitignore
+!README.md

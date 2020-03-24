@@ -11,12 +11,15 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
+__all__ = ['binomial_fill', 'draw_subsample', 'fra', 'gen_fra_dist',
+           'power_analysis', 'power_analysis_llr']
 
-def binomial_fill(n_slots, frac_silent, n_sims = 1):
+
+def binomial_fill(n_slots, frac_silent, n_sims=1):
     """
     Function probabilistically fills n_slots with silent synapses based on a
-    binomial distribution given frac_silent. n_sims total simulations are run and
-    returned in a vector silent_draw..
+    binomial distribution given frac_silent. n_sims total simulations are run
+    and returned in a vector silent_draw..
 
     """
     n_silent = np.arange(0, n_slots + 1)
@@ -25,18 +28,19 @@ def binomial_fill(n_slots, frac_silent, n_sims = 1):
     for ind, synapse in enumerate(n_silent):
         num_combinations = sp.special.comb(n_slots, n_silent[ind])
         prob_n_silent[ind] = ((frac_silent) ** n_silent[ind]) \
-        * ((1 - frac_silent) ** (n_slots - n_silent[ind])) * num_combinations
+            * ((1 - frac_silent) ** (n_slots - n_silent[ind])) * num_combinations
 
-    silent_draw = np.random.choice(n_silent, size = n_sims, p = prob_n_silent)
+    silent_draw = np.random.choice(n_silent, size=n_sims, p=prob_n_silent)
 
     return silent_draw
 
-def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
-                                     method = 'iterative', pr_dist = 'uniform',
-                                     n_start = 100,
-                                     failrate_low = 0.3, failrate_high = 0.7,
-                                     plot_ex = False, unitary_reduction = True,
-                                     frac_reduction = 0.2, verbose = True):
+
+def draw_subsample(silent_fraction=0.5, n_simulations=100,
+                   method='iterative', pr_dist='uniform',
+                   n_start=100,
+                   failrate_low=0.3, failrate_high=0.7,
+                   plot_ex=False, unitary_reduction=True,
+                   frac_reduction=0.2, verbose=True):
     """
     Function which simulates a set of minimum electrical stimulation experi-
     ments and generates a subset of silent and nonsilent synapses sampled
@@ -44,19 +48,19 @@ def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
 
     For each simulation, the algorithm does the following:
         1. Starts with n_start synapses. A binomial distribution is used to
-            assign some fraction of these synapses as silent, with silent_fraction
-            acting as p(silent).
-            Each synapse is assigned an independent release probability from the
-            distribution defined in pr_dist.
+            assign some fraction of these synapses as silent, with
+            silent_fraction acting as p(silent).
+            Each synapse is assigned an independent release probability from
+            the distribution defined in pr_dist.
         2. We then simulate the gradual reduction of electrical stimulation
-            intensity to pick some subset of the total synapse population which has
-            a hyperpolarized failure rate in some acceptable range (e.g. 20%-80%
-            by default).
+            intensity to pick some subset of the total synapse population which
+            has a hyperpolarized failure rate in some acceptable range
+            (e.g. 20%-80% by default).
             A. If unitary_reduction is True, then synapses are eliminated
-                stochastically from the recorded ensemble one at a time until the
-                theoretical failure rate of the population at hyperpolarized
-                potentials (F = Pr(1)*Pr(2)*...*Pr(i) for synapses n = 1, 2, ... i.)
-                reaches the imposed bounds.
+                stochastically from the recorded ensemble one at a time until
+                the theoretical failure rate of the population at
+                hyperpolarized potentials (F = Pr(1)*Pr(2)*...*Pr(i)
+                for synapses n = 1, 2, ... i.) reaches the imposed bounds.
                     - Yields a subset of synapses which is an unbiased
                     representation of the larger set. It is not experimentally
                     realistic, but provides a good sanity check and allows
@@ -149,92 +153,103 @@ def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
     """
 
     ###########
-    #Depending on subsampling method, either reduce iteratively by fractions,
-    #or simply pick random synapses
-    if method is 'iterative':
-        #Oversample simulations needed due to the fact that some sims will not have
-        #sufficient Pr's and n's to produce desired failure rate
+    # Depending on subsampling method, either reduce iteratively by fractions,
+    # or simply pick random synapses
+    if method == 'iterative':
+        # Oversample simulations needed due to the fact that some sims will not
+        # have sufficient Pr's and n's to produce desired failure rate
         n_sims_oversampled = n_simulations * 3
 
-        #Generate an initial large constellation of synapses (n_start in size) drawm from a binomial
-        #filling procedure
+        # Generate an initial large constellation of synapses
+        # (n_start in size) drawm from a binomial filling procedure
         silent_syn_group = binomial_fill(n_start, silent_fraction,
-                                                   n_sims = n_sims_oversampled)
+                                         n_sims=n_sims_oversampled)
         nonsilent_syn_group = (n_start
-                               * np.ones_like(silent_syn_group) ) - silent_syn_group
+                               * np.ones_like(silent_syn_group)) \
+                               - silent_syn_group
 
-        pr_silent_tomask = np.ones((n_sims_oversampled, n_start), dtype = np.bool)
+        pr_silent_tomask = np.ones((n_sims_oversampled, n_start),
+                                   dtype=np.bool)
         pr_nonsilent_tomask = np.ones_like(pr_silent_tomask)
 
-        #Release prob: Generate mask for np.ma.array type where only existing synapses are unmasked
+        # Release prob: Generate mask for np.ma.array type where only
+        # existing synapses are unmasked
         for sim in range(n_sims_oversampled):
             pr_silent_tomask[sim, 0:silent_syn_group[sim]] = False
             pr_nonsilent_tomask[sim, 0:nonsilent_syn_group[sim]] = False
 
-        #Release prob: Generate release probability distributions drawn from a random distribution
-        if pr_dist is 'uniform':
+        # Release prob: Generate release probability distributions drawn
+        # from a random distribution
+        if pr_dist == 'uniform':
             random_pr_array_sil = np.random.rand(n_sims_oversampled, n_start)
             random_pr_array_nonsil = np.random.rand(n_sims_oversampled, n_start)
 
-
-        elif pr_dist is 'gamma':
+        elif pr_dist == 'gamma':
             gamma_shape = 3
             gamma_rate = 5.8
             gamma_scale = 1 / gamma_rate
 
-            random_pr_array_sil = np.random.gamma(gamma_shape, gamma_scale,
-                                              size = (n_sims_oversampled, n_start))
-            random_pr_array_nonsil = np.random.gamma(gamma_shape, gamma_scale,
-                                              size = (n_sims_oversampled, n_start))
+            random_pr_array_sil = np.random.gamma(
+                gamma_shape, gamma_scale, size=(n_sims_oversampled, n_start))
+            random_pr_array_nonsil = np.random.gamma(
+                gamma_shape, gamma_scale, size=(n_sims_oversampled, n_start))
 
+        pr_silent_syn_group = np.ma.array(random_pr_array_sil,
+                                          mask=pr_silent_tomask)
+        pr_nonsilent_syn_group = np.ma.array(random_pr_array_nonsil,
+                                             mask=pr_nonsilent_tomask)
 
-        pr_silent_syn_group = np.ma.array(random_pr_array_sil, mask = pr_silent_tomask)
-        pr_nonsilent_syn_group = np.ma.array(random_pr_array_nonsil, mask = pr_nonsilent_tomask)
-
-        #Store whether each sim has reached its target in reached_target
-        reached_target = np.zeros(n_sims_oversampled, dtype = np.bool)
+        # Store whether each sim has reached its target in reached_target
+        reached_target = np.zeros(n_sims_oversampled, dtype=np.bool)
         prev_sum_reached_target = 0
         sum_reached_target = 0
 
-        #Counts number of reductions for frac_reduction
+        # Counts number of reductions for frac_reduction
         frac_reduction_count_ = 0
-        #Stores target val for all reductions
+        # Stores target val for all reductions
         frac_reduction_target_ = frac_reduction * n_start
 
-        #--------------------
-        #Reduce synapses in group for each simulation until all have reached target
-        #-------------------
+        # --------------------
+        # Reduce synapses in group for each simulation until
+        # all have reached target
+        # -------------------
         while np.sum(reached_target) < n_simulations:
-            #Precalculate probability of removing silent synapse
-            p_remove_silent = silent_syn_group / (silent_syn_group + nonsilent_syn_group)
+            # Precalculate probability of removing silent synapse
+            p_remove_silent = silent_syn_group \
+                / (silent_syn_group + nonsilent_syn_group)
 
-            #For all sims, choose synapses to remove. 1 refers to silent, 0 to nonsilent.
-            #Case where single synapses are removed:
+            # Case where single synapses are removed:
             sil_syn_to_remove = np.ma.array(np.random.rand(n_sims_oversampled)
-            < p_remove_silent)
+                                            < p_remove_silent)
 
-            #Remove constellations which have reached their target from the
-            #list of synapses to remove
+            # Remove constellations which have reached their target from the
+            # list of synapses to remove
             sil_syn_to_remove[np.where(reached_target == True)[0]] = np.ma.masked
 
-            #Remove synapse and correct for those that go below 0
+            # Remove synapse and correct for those that go below 0
             ind_remove_silent = np.ma.where(sil_syn_to_remove == 1)[0]
             silent_syn_group[ind_remove_silent] -= 1
-            silent_syn_group[silent_syn_group < 0] = 0 #Remove ones that go below 0
+            silent_syn_group[silent_syn_group < 0] = 0  # Remove below 0
 
             ind_remove_nonsilent = np.ma.where(sil_syn_to_remove == 0)[0]
             nonsilent_syn_group[ind_remove_nonsilent] -= 1
 
-            #Update release probabilities
+            # Update release probabilities
             pr_silent_syn_group[ind_remove_silent,
-                                silent_syn_group[ind_remove_silent]] = np.ma.masked
+                                silent_syn_group[ind_remove_silent]] \
+                                = np.ma.masked
             pr_nonsilent_syn_group[ind_remove_nonsilent,
-                                   nonsilent_syn_group[ind_remove_nonsilent]] = np.ma.masked
+                                   nonsilent_syn_group[ind_remove_nonsilent]] \
+                                   = np.ma.masked
 
-            #Check how many sims have reached their target failrate.
-            if unitary_reduction is True:  #Condition where each iteration is checked
-                #Modify vector denoting those that have reached target, calculate sum of all reached, and display it
-                failrate_thisiteration = np.ma.prod(1 - pr_nonsilent_syn_group, axis = 1)
+            # Check how many sims have reached their target failrate.
+            if unitary_reduction is True:
+                # Condition where each iteration is checked.
+
+                # Modify vector denoting those that have reached target,
+                # calculate sum of all reached, and display it
+                failrate_thisiteration = np.ma.prod(1 - pr_nonsilent_syn_group,
+                                                    axis=1)
                 reached_target_inds = np.logical_and(failrate_thisiteration
                                                      < failrate_high,
                                                      failrate_thisiteration
@@ -245,13 +260,14 @@ def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
                 prev_sum_reached_target = sum_reached_target
                 sum_reached_target = np.sum(reached_target)
 
-            elif unitary_reduction is False:  #Condition where multiple iters must pass
-                frac_reduction_count_ += 1 #Update the count of n's reduced
+            elif unitary_reduction is False:
+                # Condition where multiple iters must pass
+                frac_reduction_count_ += 1  # Update the count of n's reduced
 
                 if frac_reduction_count_ >= frac_reduction_target_:
-                    #Modify vector denoting those who have reached target
-                    failrate_thisiteration = np.ma.prod(1 - pr_nonsilent_syn_group,
-                                                        axis = 1)
+                    # Modify vector denoting those who have reached target
+                    failrate_thisiteration = np.ma.prod(
+                        1 - pr_nonsilent_syn_group, axis=1)
                     reached_target_inds = np.logical_and(failrate_thisiteration
                                                          < failrate_high,
                                                          failrate_thisiteration
@@ -262,32 +278,35 @@ def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
                     prev_sum_reached_target = sum_reached_target
                     sum_reached_target = np.sum(reached_target)
 
-                    #Recalculate a new target and set count to 0
-                    frac_reduction_target_ = np.ceil(frac_reduction
-                                                     * np.mean(silent_syn_group
-                                                     + nonsilent_syn_group))
+                    # Recalculate a new target and set count to 0
+                    frac_reduction_target_ = np.ceil(
+                        frac_reduction * np.mean(silent_syn_group
+                                                 + nonsilent_syn_group))
                     frac_reduction_count_ = 0
 
-            #Print an in-place update about % progress
-            if prev_sum_reached_target is not sum_reached_target and sum_reached_target > 0 and verbose is True:
+            # Print an in-place update about % progress
+            if prev_sum_reached_target is not sum_reached_target \
+               and sum_reached_target > 0 and verbose is True:
                 to_print = '\r' + '\tRunning subgroup reduction... ' + str(
                         sum_reached_target * 100 / n_simulations) + '%'
-                print(to_print, end = '')
+                print(to_print, end='')
 
         if verbose is True:
             print('\r\tRunning subgroup reduction... 100.00% ')
 
+        # Filter out successes
+        nonsilent_syn_group \
+            = nonsilent_syn_group[reached_target][0:n_simulations]
+        silent_syn_group \
+            = silent_syn_group[reached_target][0:n_simulations]
+        pr_silent_syn_group \
+            = pr_silent_syn_group[reached_target][0:n_simulations, :]
+        pr_nonsilent_syn_group \
+            = pr_nonsilent_syn_group[reached_target][0:n_simulations, :]
 
-        #Filter out successes
-        nonsilent_syn_group = nonsilent_syn_group[reached_target][0:n_simulations]
-        silent_syn_group = silent_syn_group[reached_target][0:n_simulations]
-        pr_silent_syn_group = pr_silent_syn_group[reached_target][0:n_simulations, :]
-        pr_nonsilent_syn_group = pr_nonsilent_syn_group[reached_target][0:n_simulations, :]
-
-
-    elif method is 'rand':
+    elif method == 'rand':
         n_sims_os = n_simulations
-        #Draw random assortments
+        # Draw random assortments
         slots = np.arange(1, 101)
 
         nonsilent_syn_group = []
@@ -295,107 +314,108 @@ def draw_subsample(silent_fraction = 0.5, n_simulations = 100,
         pr_silent_syn_group = np.array([]).reshape(0, slots[-1])
         pr_nonsilent_syn_group = np.array([]).reshape(0, slots[-1])
 
-
         for slot in slots:
-            #indices of silent/nonsilent synapses to take
-            n_silent = binomial_fill(slot, silent_fraction, n_sims =
-                                               n_sims_os)
+            # indices of silent/nonsilent synapses to take
+            n_silent = binomial_fill(slot, silent_fraction,
+                                     n_sims=n_sims_os)
 
-            if pr_dist is 'uniform':
+            if pr_dist == 'uniform':
                 random_pr_array_sil = np.random.rand(n_sims_os, slots[-1])
                 random_pr_array_nonsil = np.random.rand(n_sims_os, slots[-1])
 
-
-            elif pr_dist is 'gamma':
+            elif pr_dist == 'gamma':
                 gamma_shape = 3
                 gamma_rate = 5.8
                 gamma_scale = 1 / gamma_rate
 
-                random_pr_array_sil = np.random.gamma(gamma_shape, gamma_scale,
-                                                  size = (n_sims_os, slots[-1]))
-                random_pr_array_nonsil = np.random.gamma(gamma_shape, gamma_scale,
-                                                  size = (n_sims_os, slots[-1]))
-
+                random_pr_array_sil = np.random.gamma(
+                    gamma_shape, gamma_scale, size=(n_sims_os, slots[-1]))
+                random_pr_array_nonsil = np.random.gamma(
+                    gamma_shape, gamma_scale, size=(n_sims_os, slots[-1]))
 
             pr_silent = random_pr_array_sil
             pr_nonsilent = random_pr_array_nonsil
 
-            pr_silent_tomask = np.ones_like(pr_silent, dtype = np.bool)
-            pr_nonsilent_tomask = np.ones_like(pr_silent, dtype = np.bool)
+            pr_silent_tomask = np.ones_like(pr_silent, dtype=np.bool)
+            pr_nonsilent_tomask = np.ones_like(pr_silent, dtype=np.bool)
 
-            #Release prob: Generate mask for np.ma.array type where only existing synapses are unmasked
+            # Release prob: Generate mask for np.ma.array type
+            # where only existing synapses are unmasked
             for sim in range(n_sims_os):
                 pr_silent_tomask[sim, 0:n_silent[sim]] = False
-                pr_nonsilent_tomask[sim,
-                                    0:(slot
-                                    - n_silent[sim])] = False
+                pr_nonsilent_tomask[sim, 0:(slot
+                                            - n_silent[sim])] = False
 
-            #Release prob: Generate release probability distributions drawn from a random distribution
+            # Release prob: Generate release probability distributions
+            # drawn from a random distribution
             pr_silent = np.ma.array(pr_silent,
-                                              mask = pr_silent_tomask)
+                                    mask=pr_silent_tomask)
             pr_nonsilent = np.ma.array(pr_nonsilent,
-                                                 mask = pr_nonsilent_tomask)
+                                       mask=pr_nonsilent_tomask)
 
-            #failrate:
-            fails_nonsilent = np.ma.prod(1 - pr_nonsilent, axis = 1).data
+            # failrate:
+            fails_nonsilent = np.ma.prod(1 - pr_nonsilent, axis=1).data
             criterion = np.logical_and(fails_nonsilent > failrate_low,
                                        fails_nonsilent < failrate_high)
 
-            #keep only simulations which reach criterion
+            # keep only simulations which reach criterion
             nonsilent_syn_group = np.append(nonsilent_syn_group,
                                             pr_nonsilent[criterion, :]
-                                            .count(axis = 1))
+                                            .count(axis=1))
             silent_syn_group = np.append(silent_syn_group,
                                          pr_silent[criterion, :]
-                                         .count(axis = 1))
+                                         .count(axis=1))
             pr_silent_syn_group = np.ma.append(pr_silent_syn_group,
-                                            pr_silent[criterion, :],
-                                            axis = 0)
+                                               pr_silent[criterion, :],
+                                               axis=0)
             pr_nonsilent_syn_group = np.ma.append(pr_nonsilent_syn_group,
-                                               pr_nonsilent[criterion, :],
-                                               axis = 0)
+                                                  pr_nonsilent[criterion, :],
+                                                  axis=0)
 
             to_print = '\r' + '\tRunning randomized selection... ' + str(
                     slot * 100 / slots[-1]) + '%'
-            print(to_print, end = '')
+            print(to_print, end='')
 
-
-        #Filter out n_sims only
-        sims_keep = np.random.choice(np.arange(len(nonsilent_syn_group)), size = n_simulations,
-                                     replace = False)
+        # Filter out n_sims only
+        sims_keep = np.random.choice(
+            np.arange(len(nonsilent_syn_group)), size=n_simulations,
+            replace=False)
 
         nonsilent_syn_group = nonsilent_syn_group[sims_keep].astype(np.int)
         silent_syn_group = silent_syn_group[sims_keep].astype(np.int)
         pr_silent_syn_group = pr_silent_syn_group[sims_keep, :]
         pr_nonsilent_syn_group = pr_nonsilent_syn_group[sims_keep, :]
 
-    #-------------------
-    #Create visual depiction of synapses
-    #---------
+    # -------------------
+    # Create visual depiction of synapses
+    # ---------
     if plot_ex is True:
-        #By default only show 20 sims
-        visual_synapses = np.zeros((100, np.max(nonsilent_syn_group + silent_syn_group)))
+        # By default only show 20 sims
+        visual_synapses = np.zeros((100, np.max(
+            nonsilent_syn_group + silent_syn_group)))
 
         for sim in range(100):
             visual_synapses[sim, 0:nonsilent_syn_group[sim]] = 255
             visual_synapses[sim, nonsilent_syn_group[sim]:
-                nonsilent_syn_group[sim] + silent_syn_group[sim]] = 128
+                            nonsilent_syn_group[sim]
+                            + silent_syn_group[sim]] = 128
 
-        fig = plt.figure(figsize = (4, 10))
+        fig = plt.figure(figsize=(4, 10))
         ax = fig.add_subplot(1, 1, 1)
 
-        ax.imshow(visual_synapses, cmap = 'binary')
+        ax.imshow(visual_synapses, cmap='binary')
         ax.set_xlabel('Synapses')
         ax.set_ylabel('Simulations')
         plt.show()
 
+    return nonsilent_syn_group, silent_syn_group, \
+        pr_nonsilent_syn_group, pr_silent_syn_group
 
-    return nonsilent_syn_group, silent_syn_group, pr_nonsilent_syn_group, pr_silent_syn_group
 
 def fra(fh, fd):
     """
-    Convenience function which returns fraction silent given the failure rate at
-    hyperpolarized and depolarized potentials.
+    Convenience function which returns fraction silent given the failure rate
+    at hyperpolarized and depolarized potentials.
 
     Parameters
     ---------
@@ -411,12 +431,13 @@ def fra(fh, fd):
     """
     return 1 - np.log(fh) / np.log(fd)
 
-def gen_fra_dist(silent_fraction, method = 'iterative', pr_dist = 'uniform',
-                                num_trials = 50, n_simulations = 10000, n_start = 100,
-                                zeroing = False, graph_ex = False, verbose = False,
-                                unitary_reduction = False, frac_reduction = 0.2,
-                                binary_vals = False, failrate_low = 0.2,
-                                failrate_high = 0.8):
+
+def gen_fra_dist(silent_fraction, method='iterative', pr_dist='uniform',
+                 num_trials=50, n_simulations=10000, n_start=100,
+                 zeroing=False, graph_ex=False, verbose=False,
+                 unitary_reduction=False, frac_reduction=0.2,
+                 binary_vals=False, failrate_low=0.2,
+                 failrate_high=0.8):
     """
     This function generates a distribution of estimates for fraction silent
     synapses returned by the failure-rate analysis estimator, given a single
@@ -498,7 +519,8 @@ def gen_fra_dist(silent_fraction, method = 'iterative', pr_dist = 'uniform',
     """
 
     if verbose is True:
-        print ('Generating FRA distribution with p(silent) = ', str(silent_fraction), ':')
+        print('Generating FRA distribution with p(silent) = ',
+              str(silent_fraction), ':')
 
     if binary_vals is True:
         fra_calc = np.zeros(n_simulations)
@@ -506,36 +528,45 @@ def gen_fra_dist(silent_fraction, method = 'iterative', pr_dist = 'uniform',
 
         return fra_calc
 
-    #First, generate realistic groups of neurons
+    # First, generate realistic groups of neurons
     nonsilent_syn_group, silent_syn_group, \
-    pr_nonsilent_syn_group, pr_silent_syn_group \
-    = draw_subsample(method = method, pr_dist = pr_dist,
-                                       n_simulations = n_simulations,
-                                       n_start = n_start,
-                                       silent_fraction = silent_fraction,
-                                       failrate_low = failrate_low,
-                                       failrate_high = failrate_high,
-                                       unitary_reduction = unitary_reduction,
-                                       frac_reduction = frac_reduction,
-                                       verbose = verbose)
+        pr_nonsilent_syn_group, pr_silent_syn_group \
+        = draw_subsample(method=method, pr_dist=pr_dist,
+                         n_simulations=n_simulations,
+                         n_start=n_start,
+                         silent_fraction=silent_fraction,
+                         failrate_low=failrate_low,
+                         failrate_high=failrate_high,
+                         unitary_reduction=unitary_reduction,
+                         frac_reduction=frac_reduction,
+                         verbose=verbose)
 
-    #Calculate p(failure) mathematically for hyperpol, depol based on product of (1- pr)
-    math_failure_rate_hyperpol = np.ma.prod(1 - pr_nonsilent_syn_group, axis = 1).compressed()
+    # Calculate p(failure) mathematically for hyperpol,
+    # depol based on product of (1- pr)
+    math_failure_rate_hyperpol = np.ma.prod(1 - pr_nonsilent_syn_group,
+                                            axis=1).compressed()
 
-    pr_all_depol = np.ma.append(pr_nonsilent_syn_group, pr_silent_syn_group, axis = 1)
-    math_failure_rate_depol = np.ma.prod(1 - pr_all_depol, axis = 1).compressed()
+    pr_all_depol = np.ma.append(pr_nonsilent_syn_group,
+                                pr_silent_syn_group, axis=1)
+    math_failure_rate_depol = np.ma.prod(1 - pr_all_depol,
+                                         axis=1).compressed()
 
-    #Simulate trials where failure rate is binary, calculate fraction fails
-    sim_failure_rate_hyperpol = np.sum(np.random.rand(n_simulations, num_trials) < np.tile(
-            math_failure_rate_hyperpol, (num_trials, 1)).transpose(), axis = 1) / num_trials
+    # Simulate trials where failure rate is binary, calculate fraction fails
+    sim_failure_rate_hyperpol = np.sum(
+        np.random.rand(n_simulations, num_trials) < np.tile(
+            math_failure_rate_hyperpol,
+            (num_trials, 1)).transpose(), axis=1) / num_trials
 
-    sim_failure_rate_depol = np.sum(np.random.rand(n_simulations, num_trials) < np.tile(
-            math_failure_rate_depol, (num_trials, 1)).transpose(), axis = 1) / num_trials
+    sim_failure_rate_depol = np.sum(
+        np.random.rand(n_simulations, num_trials) < np.tile(
+            math_failure_rate_depol,
+            (num_trials, 1)).transpose(), axis=1) / num_trials
 
-    #Calculate failure rate
-    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) / np.log(sim_failure_rate_depol)
+    # Calculate failure rate
+    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) \
+        / np.log(sim_failure_rate_depol)
 
-    #Filter out oddities
+    # Filter out oddities
     fra_calc[fra_calc == -(np.inf)] = 0
     fra_calc[fra_calc == np.inf] = 0
     fra_calc[fra_calc == np.nan] = 0
@@ -547,10 +578,10 @@ def gen_fra_dist(silent_fraction, method = 'iterative', pr_dist = 'uniform',
     return fra_calc
 
 
-def power_analysis(fra_dist_1, fra_dist_2, init_guess = 2048,
-                       sample_draws = 2000,
-                       alpha = 0.05, beta = 0.1, stat_test = 'ranksum',
-                       ctrl_n = False, verbosity = True):
+def power_analysis(fra_dist_1, fra_dist_2, init_guess=2048,
+                   sample_draws=2000,
+                   alpha=0.05, beta=0.1, stat_test='ranksum',
+                   ctrl_n=False, verbosity=True):
     """
     Performs a power analysis on two distributions of estimates for fraction
     synapses silent, which ostensibly come from two separate populations with
@@ -644,65 +675,71 @@ def power_analysis(fra_dist_1, fra_dist_2, init_guess = 2048,
         beta levels of statistical confidence
     """
 
-    #Initialize variables
+    # Initialize variables
     min_sample_reached = False
     current_guess = init_guess
     last_guess = 0
-    last_correct = init_guess #The last correct guess made.
+    last_correct = init_guess  # The last correct guess made.
     final_iter = False
 
-    #Iterate through reductions in sample size
+    # Iterate through reductions in sample size
     while min_sample_reached is False:
         if verbosity is True:
-            print('\t\tn_samples: ', str(current_guess), ' ... ', end = '')
+            print('\t\tn_samples: ', str(current_guess), ' ... ', end='')
 
         if abs(current_guess - last_guess) < 1.5:
             final_iter = True
 
-        #Pick indices for each sample set
+        # Pick indices for each sample set
         if ctrl_n is False:
             inds_fra1_ = np.random.randint(0, len(fra_dist_1),
-                                           size = (sample_draws, current_guess))
+                                           size=(sample_draws, current_guess))
         else:
             inds_fra1_ = np.random.randint(0, len(fra_dist_1),
-                                           size = (sample_draws, ctrl_n))
-
+                                           size=(sample_draws, ctrl_n))
 
         inds_fra2_ = np.random.randint(0, len(fra_dist_2),
-                                       size = (sample_draws, current_guess))
+                                       size=(sample_draws, current_guess))
         pvals_ = np.empty([sample_draws])
 
-        #For each sample set, perform rank-sum test and store in pvals_temp
+        # For each sample set, perform rank-sum test and store in pvals_temp
         for ind_power in range(inds_fra1_.shape[0]):
-            if stat_test is 'ranksum':
-                stat, pval = stats.ranksums(fra_dist_1[inds_fra1_[ind_power, :]], fra_dist_2[inds_fra2_[ind_power, :]])
-            elif stat_test is 'chisquare':
-                obs1_silent_counts = int(np.sum(fra_dist_1[inds_fra1_[ind_power, :]]))
+            if stat_test == 'ranksum':
+                stat, pval = stats.ranksums(
+                    fra_dist_1[inds_fra1_[ind_power, :]],
+                    fra_dist_2[inds_fra2_[ind_power, :]])
+            elif stat_test == 'chisquare':
+                obs1_silent_counts = int(np.sum(
+                    fra_dist_1[inds_fra1_[ind_power, :]]))
                 obs1_nonsilent_counts = int(current_guess - obs1_silent_counts)
-                obs2_silent_counts = int(np.sum(fra_dist_2[inds_fra2_[ind_power, :]]))
+                obs2_silent_counts = int(np.sum(
+                    fra_dist_2[inds_fra2_[ind_power, :]]))
                 obs2_nonsilent_counts = int(current_guess - obs2_silent_counts)
 
-                contingency = np.array([[obs1_silent_counts, obs1_nonsilent_counts],
-                                              [obs2_silent_counts, obs2_nonsilent_counts]])
+                contingency = np.array(
+                    [[obs1_silent_counts, obs1_nonsilent_counts],
+                     [obs2_silent_counts, obs2_nonsilent_counts]])
                 if obs1_nonsilent_counts + obs2_nonsilent_counts == 0:
                     pval = 1
                 elif obs1_silent_counts + obs2_silent_counts == 0:
                     pval = 1
                 else:
-                    chi2, pval, dof, expected = stats.chi2_contingency(contingency, correction=False)
+                    chi2, pval, dof, expected = stats.chi2_contingency(
+                        contingency, correction=False)
 
             pvals_[ind_power] = pval
 
-        #Calc fraction of draws where pvals_ reaches alpha significance
+        # Calc fraction of draws where pvals_ reaches alpha significance
         fraction_alpha_signif = np.sum(pvals_ < alpha)
 
-        #If beta significance not reached
+        # If beta significance not reached
         if (fraction_alpha_signif / len(pvals_)) > (1 - beta):
             if verbosity is True:
                 print('*')
 
             last_guess_next = current_guess
-            current_guess_next = round(current_guess - (abs(current_guess - last_guess) / 2))
+            current_guess_next = round(
+                current_guess - (abs(current_guess - last_guess) / 2))
 
             last_correct = current_guess
 
@@ -716,19 +753,20 @@ def power_analysis(fra_dist_1, fra_dist_2, init_guess = 2048,
 
                 break
 
-        #If beta significance reached
+        # If beta significance reached
         elif (fraction_alpha_signif / len(pvals_)) < (1 - beta):
-             if verbosity is True:
-                 print('NS')
+            if verbosity is True:
+                print('NS')
 
-             #Catch for beta significance being reached on the first guess
-             if current_guess == init_guess:
+            # Catch for beta significance being reached on the first guess
+            if current_guess == init_guess:
                 min_sample_reached = True
                 min_samplesize_required = current_guess
                 break
 
              last_guess_next = current_guess
-             current_guess_next = round(current_guess + (abs(current_guess - last_guess) / 2))
+             current_guess_next = round(
+                 current_guess + (abs(current_guess - last_guess) / 2))
 
              last_guess = last_guess_next
              current_guess = current_guess_next

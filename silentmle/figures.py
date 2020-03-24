@@ -1,7 +1,4 @@
-
-# * import:
 import os
-
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -9,7 +6,6 @@ from matplotlib import cm
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 
-from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
@@ -62,6 +58,7 @@ def plot_fig1(figname='Figure1.pdf',
     sim_ex.set_xlabel('Sweeps')
     sim_ex.set_xlim([0, 100])
     sim_ex.set_xticks([0, 50, 100])
+
     sim_ex.set_ylabel('Sim. current (pA)')
     sim_ex.set_ylim([-15, 15])
     sim_ex.set_yticks([-10, 0, 10])
@@ -478,10 +475,10 @@ def plot_fig1_S1(figname='Figure1_S1.pdf',
                          horizontalalignment='right',
                          verticalalignment='center')
 
-        if ind is 2:
+        if ind == 2:
             calcex[ind].set_xlabel('Sweeps')
 
-        if ind is 1:
+        if ind == 1:
             calcex[ind].set_ylabel('Sim. current (pA)')
 
     ########################
@@ -706,9 +703,9 @@ def plot_fig1_S2(figname='Figure1_S2.pdf', fontsize=9, alpha_=0.9):
         failex[ind].xaxis.set_ticks_position('bottom')
         failex[ind].set_xticks([0, 25, 50, 75, 100])
 
-        if ind is 1:
+        if ind == 1:
             failex[ind].set_ylabel('Sim. current (pA)')
-        if ind is 2:
+        if ind == 2:
             failex[ind].set_xlabel('Sweeps')
 
         text_hp = 'hyp. fails: {0:.2f}'.format(fails_hyp[ind])
@@ -1019,13 +1016,7 @@ def plot_fig2(silent_fraction_low=0.1,
     color_nonsilent = np.array([0.1, 0.55, 0.85])
     color_silent = np.array([0.76, 0.26, 0.22])
 
-    img_colormod_ns = 0.4
-    img_colormod_s = 1.1
-    img_alpha = 0.5
-
     color_pr = np.array([0.25, 0.55, 0.18])
-
-    color_ratio_accuracy = [0.37, 0.25, 0.21]
 
     # Subplot 2: Number of active/silent synapses
     n_plot_nonsil = fig.add_subplot(spec_all[0, 2:4])
@@ -1060,9 +1051,9 @@ def plot_fig2(silent_fraction_low=0.1,
     n_plot_nonsil.set_xticks(np.arange(0, 9, 2))
     n_plot_nonsil.set_xlim([0, 8])
     n_plot_nonsil.set_ylim([0, 0.8])
-    
-    leg_ns = n_plot_nonsil.legend(labels=(silent_truefrac_coarse * 100).astype(
-        np.int),
+
+    leg_ns = n_plot_nonsil.legend(labels=(silent_truefrac_coarse * 100)
+                                   .astype(np.int),
                                   title='silent (%)',
                                   ncol=2,
                                   loc=1,
@@ -1111,7 +1102,7 @@ def plot_fig2(silent_fraction_low=0.1,
                 markersize=1)
             release_prob_nonsil.plot(
                 syn_number, pr_nonsil_mean[syn_number], '.',
-                color = color_pr, alpha=0.9, markersize=5)
+                color=color_pr, alpha=0.9, markersize=5)
 
     # Plot the subset composition vs superset composition for each position
     subset_fracsil = np.empty(len(silent_truefrac_coarse), dtype=np.ndarray)
@@ -1141,7 +1132,7 @@ def plot_fig2(silent_fraction_low=0.1,
                       '--k',
                       linewidth=0.5)
 
-    # Adjust plot features 
+    # Adjust plot features
     release_prob_nonsil.set_xlim([0, 8.3])
     release_prob_nonsil.set_ylim([0, 1])
     release_prob_nonsil.set_xticks(np.arange(0, 9, 2))
@@ -1213,12 +1204,12 @@ def plot_fig2(silent_fraction_low=0.1,
 
         nonsilent_syn_group_, silent_syn_group_, \
             pr_nonsilent_syn_group_, pr_silent_syn_group_ \
-            = draw_subsample(pr_dist = pr_dist,
-                             n_simulations = 1, n_start = n_start,
-                             silent_fraction = silent_, failrate_low = 0.2,
-                             failrate_high = 0.8,
-                             unitary_reduction = False,
-                             frac_reduction = frac_reduction)
+            = draw_subsample(pr_dist=pr_dist,
+                             n_simulations=1, n_start=n_start,
+                             silent_fraction=silent_, failrate_low=0.2,
+                             failrate_high=0.8,
+                             unitary_reduction=False,
+                             frac_reduction=frac_reduction)
 
         pr_sweeps_hyp_ = np.tile(pr_nonsilent_syn_group_.compressed(),
                                  50).reshape(50, nonsilent_syn_group_[0])
@@ -1395,6 +1386,8 @@ def plot_fig2(silent_fraction_low=0.1,
     return
 
 # ** fig4:
+
+
 def plot_fig4(n_true_silents=26,
               fontsize=8,
               sample_draws=5000,
@@ -1652,7 +1645,6 @@ def plot_fig4(n_true_silents=26,
             discrim_nsamp_std[cond][ind_discrim] = np.std(
                 discrim_nsamples[cond][ind_discrim])
 
-
     ###########################################################################
     # 2. Make figure
     ###########################################################################
@@ -1675,7 +1667,7 @@ def plot_fig4(n_true_silents=26,
     # Define colors to be used
     # color_1 = np.array([0.25, 0.55, 0.18])
     color_fra_palette = sns.diverging_palette(130, 30, l=45, s=90,
-                                      center="dark", as_cmap=True)
+                                              center="dark", as_cmap=True)
     color_fra = color_fra_palette(0.1)
 
     # ---------------------------
@@ -1959,9 +1951,9 @@ def plot_fig4(n_true_silents=26,
 
 # ** _old_fig4:
 def _old_plot_fig4(n_true_silents=26,
-              fontsize=8,
-              sample_draws=5000,
-              figname='Fig4.pdf'):
+                   fontsize=8,
+                   sample_draws=5000,
+                   figname='Fig4.pdf'):
     '''
     Plot the power analysis figure.
 
@@ -2529,7 +2521,7 @@ def plot_fig4_suppLLR(n_true_silents=100,
     Plot the power analysis figure: Compare null to experimental cases
     - 1a. Use log-likelihood ratio to analytically compute
     power analysis curve for binary comparisons
-    - 1b. Use numerical simulations to compute power analysis curve 
+    - 1b. Use numerical simulations to compute power analysis curve
     from FRA methods
     - 2/3: Redo 1, but with changes in control sample sizes?
 
@@ -2569,18 +2561,16 @@ def plot_fig4_suppLLR(n_true_silents=100,
 
     # Create loglikelihood function for each case
     step = 0.01
-    obs = np.arange(-2, 1 + 2 * step, step)  # Bin observations from -200 to 100
+    obs = np.arange(-2, 1 + 2 * step, step)  # Bin observations from -200->100
     likelihood = np.empty([len(obs), len(silent_truefrac)])
     for ind_obs, obs_ in enumerate(obs):
         for ind_hyp, hyp_ in enumerate(silent_truefrac):
-            # obs_in_range = np.where(np.logical_and(
-            #     fra_calc[ind_hyp] < obs_ + step/2, fra_calc[ind_hyp] > obs_ - step/2))[0]
             obs_in_range = np.where(
                 np.abs(fra_calc[ind_hyp] - obs_) < step / 2)[0]
             p_obs = len(obs_in_range) / len(fra_calc[ind_hyp])
             likelihood[ind_obs, ind_hyp] = p_obs
     # Set likelihoods microscopically away from 0 to avoid log(0) errors
-    likelihood += 0.0001  
+    likelihood += 0.0001
 
     # ------------------
     # Set up guesses for each condition to start at
@@ -2814,6 +2804,8 @@ def plot_fig4_suppLLR(n_true_silents=100,
 # * test fns:
 
 # ** _gen_fra_dist_fails:
+
+
 def _gen_fra_dist_fails(method='iterative',
                         pr_dist='uniform',
                         silent_fraction=0.5,
@@ -2831,7 +2823,7 @@ def _gen_fra_dist_fails(method='iterative',
     '''
     In-progress function to attempt to perform MLE using two variables per
     experiment: Fh and Fd. Here, the numerical simulations are performed and
-    an estimate distribution along with failure rate distributions 
+    an estimate distribution along with failure rate distributions
     are returned.
     '''
 
@@ -2952,7 +2944,7 @@ def _mle_fh_fd():
 
                 likelihood[ind_obs_fh, ind_obs_fd, ind_hyp] = p_obs
     # Set likelihoods microscopically away from 0 to avoid log(0) errors
-    likelihood += 0.0001  
+    likelihood += 0.0001
 
     # -----------------------------
     # Plotting
