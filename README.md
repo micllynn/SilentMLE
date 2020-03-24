@@ -9,7 +9,7 @@ The estimator can work on either raw failure rate data, or on previously estimat
 ## Getting Started
 
 ### Prerequisites
-The main dependencies are: numpy, scipy, matplotlib.
+The main dependencies are: python3.6, numpy, scipy, matplotlib.
 
 ### Installation on UNIX-like systems (MacOS/Linux)
 
@@ -31,13 +31,14 @@ estimator = sil.Estimator()
 
 Alternately, the `sil.Estimator` class can be initialized with a number of experimental constraints and/or simulation parameters. A full list of possible parameters can be found in the full class documentation of `sil.Estimator`, accessible through `print(sil.Estimator.__init__.__doc__)`. As an example:
 ```python
-#Simulate using a fine-grained 500 points in the hypothesis-space (fraction silent);
-#use a uniform release probability distribution for the synapses; and
-#run the experimental simulations with 100 trials per Vm and an accepted failure
-#rate range at hyperpolarized values of 0.4<F<0.6.
-estimator = sil.Estimator(n_likelihood_points = 500,
-      pr_dist = 'uniform', num_trials = 100, failrate_low = 0.4,
-      failrate_high = 0.6)
+estimator = sil.Estimator(n_likelihood_points=500,
+      pr_dist='uniform', num_trials=100, failrate_low=0.4,
+      failrate_high=0.6)
+
+# Simulate using a fine-grained 500 points in the hypothesis-space (fraction silent);
+# use a uniform release probability distribution for the synapses; and
+# run the experimental simulations with 100 trials per Vm and an accepted failure
+# rate range at hyperpolarized values of 0.4<F<0.6.
 ```
 
 All simulation and experimental parameters are stored in the class instance as `estimator.params` for easy access.
@@ -48,13 +49,13 @@ The numerically simulated likelihood function is stored as `estimator.likelihood
 One can perform MLE on either a set of previous FRA estimates, or on pairs of raw failure rates at -70mV and +40mV. Both types are demonstrated below.
 
 ```python
-#For data in FRA estimate form
+# For data in FRA estimate form
 data = [0.18, 0.27, 0.11, -0.10, -0.02, 0.08]
-likelihood = estimator.estimate(data, dtype = 'est')
+likelihood = estimator.estimate(data, dtype='est')
 
-#For data in raw failure rate form
+# For data in raw failure rate form
 data = [[0.2, 0.18], [0.4, 0.36], [0.38, 0.48], [0.58, 0.6], [0.46, 0.31]]
-likelihood = estimator.estimate(data, dtype = 'failrate')
+likelihood = estimator.estimate(data, dtype='failrate')
 ```
 
 Here, likelihood returns a vector of length `h` containing the joint likelihood across all observations, where `h` is the hypothesis space size (i.e. `len(estimator.hyp)`)
@@ -64,20 +65,20 @@ Here, likelihood returns a vector of length `h` containing the joint likelihood 
 ### Core simulation/analysis functions
 
 ```python
-#Experimental simulation drawing a subsample of synapses from a large pop.
+# Experimental simulation drawing a subsample of synapses from a large pop.
 sil.core.draw_subsample()
 
-#Returns FRA estimate of fraction silent.
+# Returns FRA estimate of fraction silent.
 sil.core.fra(fh, fd)
 
-#Generates distribution of FRA values given a ground truth silent.
+# Generates distribution of FRA values given a ground truth silent.
 sil.core.gen_fra_dist()
 ```
 
 ### Plotting functions
 
 ```python
-#Each of these functions will redo all analysis/simulations and will return a fully formatted figure.
+# Each of these functions will redo all analysis/simulations and will return a fully formatted figure.
 
 sil.figures.plot_fig1()
 sil.figures.plot_fig1_S1()

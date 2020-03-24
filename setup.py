@@ -7,11 +7,12 @@ from setuptools import setup
 
 setup(name='silentmle',
       version='0.1',
-      description='Performs maximum likelihood estimation on sets of FRA data'
+      description='Performs maximum likelihood estimation on sets of FRA data',
       url='https://github.com/micllynn/SilentMLE',
       author='Michael Lynn',
       author_email='micllynn@gmail.com',
       license='MIT',
       packages=['silentmle'],
-      install_requires = ['numpy', 'scipy', 'matplotlib'],
-      zip_safe = False)
+      python_requires=['>=3.6'],
+      install_requires=['numpy', 'scipy', 'matplotlib'],
+      zip_safe=False)
