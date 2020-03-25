@@ -1,5 +1,13 @@
+"""
+figures.py: Functions for recreating the figures found in the publication
+
+Author: mbfl
+Date: 19.9
+"""
+
 import os
 import numpy as np
+import scipy.stats as sp_stats
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -11,7 +19,7 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 try:
     from .core import *
-except:
+except ModuleNotFoundError:
     from silentmle.core import *
 
 # Define global colormap for red_blue
@@ -26,7 +34,8 @@ def plot_fig1(figname='Figure1.pdf',
               cmap_hyp=0.9,
               cmap_dep=0.1):
 
-    plt.style.use('publication_pnas_ml')
+    try:
+        plt.style.use('publication_pnas_ml')
 
     fig = plt.figure(constrained_layout=True)
     fig.set_figheight(6.5)
@@ -273,7 +282,8 @@ def plot_fig1_S1(figname='Figure1_S1.pdf',
 
     fig.set_figheight(8)
     fig.set_figwidth(8)
-    plt.style.use('publication_ml')
+    try:
+        plt.style.use('publication_ml')
     plt.rc('font', size=fontsize)
 
     # Define spec for entire fig
@@ -621,7 +631,8 @@ def plot_fig1_S2(figname='Figure1_S2.pdf', fontsize=9, alpha_=0.9):
 
     fig.set_figheight(4)
     fig.set_figwidth(8)
-    plt.style.use('publication_ml')
+    try:
+        plt.style.use('publication_ml')
     plt.rc('font', size=fontsize)
 
     # Define spec for entire fig
@@ -835,6 +846,11 @@ def plot_fig1_S2(figname='Figure1_S2.pdf', fontsize=9, alpha_=0.9):
 
 
 # ** fig2:
+# For gamma:
+# gamma_shape = 3
+# gamma_rate = 5.8
+# gamma_scale = 1 / gamma_rate
+
 def plot_fig2(silent_fraction_low=0.1,
               silent_fraction_high=0.9,
               plot_sims=40,
@@ -844,7 +860,8 @@ def plot_fig2(silent_fraction_low=0.1,
               trueval_lim=0.1,
               frac_reduction=0.1,
               method_='iterative',
-              pr_dist='uniform',
+              pr_dist_sil=PrDist(sp_stats.uniform),
+              pr_dist_nonsil=PrDist(sp_stats.uniform),
               cmap=cm_):
     '''
     Fig 2:
@@ -866,7 +883,9 @@ def plot_fig2(silent_fraction_low=0.1,
     # Run simulation: 0.5 silent
     nonsilent_syn_group_half, silent_syn_group_half, \
         pr_nonsilent_syn_group_half, pr_silent_syn_group_half \
-        = draw_subsample(method=method_, pr_dist=pr_dist,
+        = draw_subsample(method=method_,
+                         pr_dist_sil=pr_dist_sil,
+                         pr_dist_nonsil=pr_dist_nonsil,
                          n_simulations=10000, n_start=n_start,
                          silent_fraction=0.5, failrate_low=0.2,
                          failrate_high=0.8,
@@ -893,7 +912,9 @@ def plot_fig2(silent_fraction_low=0.1,
 
         nonsilent_syn_group[ind_silent], silent_syn_group[ind_silent], \
             pr_nonsilent_syn_group[ind_silent], pr_silent_syn_group[ind_silent] \
-            = draw_subsample(method=method_, pr_dist=pr_dist,
+            = draw_subsample(method=method_,
+                             pr_dist_sil=pr_dist_sil,
+                             pr_dist_nonsil=pr_dist_nonsil,
                              n_simulations=10000, n_start=n_start,
                              silent_fraction=silent, failrate_low=0.2,
                              failrate_high=0.8,
@@ -940,7 +961,8 @@ def plot_fig2(silent_fraction_low=0.1,
 
         # Make calculation of FRA values
         fra_calc[ind] = gen_fra_dist(method=method_,
-                                     pr_dist=pr_dist,
+                                     pr_dist_sil=pr_dist_sil,
+                                     pr_dist_nonsil=pr_dist_nonsil,
                                      n_simulations=10000,
                                      silent_fraction=silent,
                                      zeroing=False,
@@ -948,7 +970,8 @@ def plot_fig2(silent_fraction_low=0.1,
                                      frac_reduction=frac_reduction)
 
         fra_calc_z[ind] = gen_fra_dist(method=method_,
-                                       pr_dist=pr_dist,
+                                       pr_dist_sil=pr_dist_sil,
+                                       pr_dist_nonsil=pr_dist_nonsil,
                                        n_simulations=10000,
                                        silent_fraction=silent,
                                        zeroing=True,
@@ -1005,7 +1028,8 @@ def plot_fig2(silent_fraction_low=0.1,
     fig = plt.figure(constrained_layout=True)
     fig.set_figheight(6.5)
     fig.set_figwidth(3.43)
-    plt.style.use('publication_pnas_ml')
+    try:
+        plt.style.use('publication_pnas_ml')
     fontsize = 8
     plt.rc('font', size=fontsize)  # controls default text sizes
 
@@ -1204,7 +1228,8 @@ def plot_fig2(silent_fraction_low=0.1,
 
         nonsilent_syn_group_, silent_syn_group_, \
             pr_nonsilent_syn_group_, pr_silent_syn_group_ \
-            = draw_subsample(pr_dist=pr_dist,
+            = draw_subsample(pr_dist_sil=pr_dist_sil,
+                             pr_dist_nonsil=pr_dist_nonsil,
                              n_simulations=1, n_start=n_start,
                              silent_fraction=silent_, failrate_low=0.2,
                              failrate_high=0.8,
@@ -1352,10 +1377,10 @@ def plot_fig2(silent_fraction_low=0.1,
     ax_bias.plot(silent_truefrac_fine * 100,
                  bias_no_z * 100,
                  color=[0.5, 0.5, 0.5])
-    ax_bias.legend(labels=['FRA', 'zeroed FRA'], title='estimator')
+    ax_bias.legend(labels=['FRA (zeroed)', 'FRA (raw)'], title='estimator')
     ax_bias.set_xlabel('ground truth silent (%)')
     ax_bias.set_ylabel('estimator bias (%)')
-    ax_bias.set_ylim([0, ax_bias.get_ylim()[1]])
+    # ax_bias.set_ylim([0, ax_bias.get_ylim()[1]])
     ax_bias.set_xticks([0, 10, 20, 30, 40, 50])
 
     ax_var = fig.add_subplot(spec_all[4:6, 3:6])
@@ -1367,7 +1392,7 @@ def plot_fig2(silent_fraction_low=0.1,
         stdev_no_z[ind] = np.std(fra_calc[ind] * 100)
     ax_var.plot(silent_truefrac_fine * 100, stdev, color=[0, 0, 0])
     ax_var.plot(silent_truefrac_fine * 100, stdev_no_z, color=[0.5, 0.5, 0.5])
-    ax_var.legend(labels=['FRA', 'zeroed FRA'], title='estimator')
+    ax_var.legend(labels=['FRA (zeroed)', 'FRA (raw)'], title='estimator')
     ax_var.set_xlabel('ground truth silent (%)')
     ax_var.set_ylabel('estimator std (%)')
     ax_var.set_ylim([0, ax_var.get_ylim()[1]])
@@ -1648,7 +1673,8 @@ def plot_fig4(n_true_silents=26,
     ###########################################################################
     # 2. Make figure
     ###########################################################################
-    plt.style.use('publication_pnas_ml')
+    try:
+        plt.style.use('publication_pnas_ml')
     lw_ = 1  # universal linewidth argument passed to each plot
 
     fig = plt.figure(constrained_layout=True)
@@ -2211,7 +2237,8 @@ def _old_plot_fig4(n_true_silents=26,
     ###########################################################################
     # 2. Make figure
     ###########################################################################
-    plt.style.use('publication_pnas_ml')
+    try:
+        plt.style.use('publication_pnas_ml')
     lw_ = 1  # universal linewidth argument passed to each plot
 
     fig = plt.figure(constrained_layout=True)
@@ -2807,7 +2834,8 @@ def plot_fig4_suppLLR(n_true_silents=100,
 
 
 def _gen_fra_dist_fails(method='iterative',
-                        pr_dist='uniform',
+                        pr_dist_sil=PrDist(sp_stats.uniform),
+                        pr_dist_nonsil=PrDist(sp_stats.uniform),
                         silent_fraction=0.5,
                         num_trials=50,
                         n_simulations=10000,
@@ -2840,7 +2868,9 @@ def _gen_fra_dist_fails(method='iterative',
     # First, generate realistic groups of neurons
     nonsilent_syn_group, silent_syn_group, \
         pr_nonsilent_syn_group, pr_silent_syn_group \
-        = draw_subsample(method=method, pr_dist=pr_dist,
+        = draw_subsample(method=method,
+                         pr_dist_sil=pr_dist_sil,
+                         pr_dist_nonsil=pr_dist_nonsil,
                          n_simulations=n_simulations,
                          n_start=n_start,
                          silent_fraction=silent_fraction,

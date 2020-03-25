@@ -1,17 +1,20 @@
+"""
+core.py: Main functions for simulating synapse reductions, generating
+synthetic FRA distributions, and performing power analysis.
+
+Author: mbfl
+Date: 19.9
+"""
+
 import numpy as np
 import scipy as sp
-import scipy.stats as stats
-import scipy.signal as sp_signal
+import scipy.stats as sp_stats
 
 import matplotlib.pyplot as plt
-from matplotlib import cm
 import matplotlib.gridspec as gridspec
 
-from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
-__all__ = ['binomial_fill', 'draw_subsample', 'fra', 'gen_fra_dist',
+__all__ = ['binomial_fill', 'PrDist', 'draw_subsample', 'fra', 'gen_fra_dist',
            'power_analysis', 'power_analysis_llr']
 
 
@@ -19,8 +22,23 @@ def binomial_fill(n_slots, frac_silent, n_sims=1):
     """
     Function probabilistically fills n_slots with silent synapses based on a
     binomial distribution given frac_silent. n_sims total simulations are run
-    and returned in a vector silent_draw..
+    and returned in a vector silent_draw.
 
+    Parameters
+    ----------
+    n_slots : int
+        Number of slots to fill.
+    frac_silent : float
+        Fraction of silent synapses, 0<frac_silent<1.
+    n_sims : int (default 1)
+        Number of simulations to return
+
+    Returns
+    ----------
+    silent_draw : np.ndarray
+        Vector of draws, with shape n_sims. Each element is an integer
+        denoting the number of silent synapses, out of n_slots,
+        for that particular simulation.
     """
     n_silent = np.arange(0, n_slots + 1)
     prob_n_silent = np.empty(n_slots + 1)
@@ -28,15 +46,55 @@ def binomial_fill(n_slots, frac_silent, n_sims=1):
     for ind, synapse in enumerate(n_silent):
         num_combinations = sp.special.comb(n_slots, n_silent[ind])
         prob_n_silent[ind] = ((frac_silent) ** n_silent[ind]) \
-            * ((1 - frac_silent) ** (n_slots - n_silent[ind])) * num_combinations
+            * ((1 - frac_silent) ** (n_slots - n_silent[ind])) \
+            * num_combinations
 
     silent_draw = np.random.choice(n_silent, size=n_sims, p=prob_n_silent)
 
     return silent_draw
 
 
+class PrDist(object):
+    """
+    Class holds information about a scipy.stats probability dist.
+    (Passed to draw_subsample to specify the Pr distribution for
+    a group of synapses.)
+
+    Parameters
+    ---------
+    dist : scipy.stats distribution
+        The distribution to draw from.
+    args: dict (default {})
+        A dictionary holding kwargs for the scipy.stats distribution.
+        (e.g. args={'shape': 1, 'scale': 2} will get passed as **args
+        to dist when it is initialized.)
+        * Defaults to an empty dictionary, i.e. default args for the dist.
+    """
+
+    def __init__(self, dist, args={}):
+        self.dist = dist(**args)
+
+    def __call__(self, size):
+        """
+        Draws an array of random values from the specified distribution,
+        with a certain size.
+
+        Parameters
+        ----------
+        size : tuple
+            Size of the array to draw (eg size=(1, 3))
+
+        Returns
+        rvs : np.ndarray
+            Numpy array of random values with rvs.shape=size
+        """
+        return self.dist.rvs(size=size)
+
+
 def draw_subsample(silent_fraction=0.5, n_simulations=100,
-                   method='iterative', pr_dist='uniform',
+                   method='iterative',
+                   pr_dist_sil=PrDist(sp_stats.uniform),
+                   pr_dist_nonsil=PrDist(sp_stats.uniform),
                    n_start=100,
                    failrate_low=0.3, failrate_high=0.7,
                    plot_ex=False, unitary_reduction=True,
@@ -107,11 +165,12 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
         If unitary_reduction is false, then frac_reduction describes the
         fraction of the total n to reduce the recorded population by
         each step.
-    pr_dist : string; 'uniform' or 'gamma'
-        Describes the distribution with which to draw individual synapse
-        release probabilities from. If 'uniform', synapses have equal
-        probability of having release probabilities from 0 to 1. If 'gamma',
-        the distribution is a gamma distribution with params. below.
+    pr_dist_sil : PrDist class instance
+        Describes the distribution with which to draw silent synapse
+        release probabilities from.
+    pr_dist_nonsil : PrDist class instance
+        Describes the distribution with which to draw nonsilent synapse
+        release probabilities from.
     num_trials : int (default  50)
         Number of trials to simulate for each voltage-clamp condition (e.g.)
         hyperpolarized and depolarized.
@@ -180,19 +239,10 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
 
         # Release prob: Generate release probability distributions drawn
         # from a random distribution
-        if pr_dist == 'uniform':
-            random_pr_array_sil = np.random.rand(n_sims_oversampled, n_start)
-            random_pr_array_nonsil = np.random.rand(n_sims_oversampled, n_start)
-
-        elif pr_dist == 'gamma':
-            gamma_shape = 3
-            gamma_rate = 5.8
-            gamma_scale = 1 / gamma_rate
-
-            random_pr_array_sil = np.random.gamma(
-                gamma_shape, gamma_scale, size=(n_sims_oversampled, n_start))
-            random_pr_array_nonsil = np.random.gamma(
-                gamma_shape, gamma_scale, size=(n_sims_oversampled, n_start))
+        random_pr_array_sil = pr_dist_sil(size=(n_sims_oversampled,
+                                                n_start))
+        random_pr_array_nonsil = pr_dist_nonsil(size=(n_sims_oversampled,
+                                                      n_start))
 
         pr_silent_syn_group = np.ma.array(random_pr_array_sil,
                                           mask=pr_silent_tomask)
@@ -319,19 +369,8 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
             n_silent = binomial_fill(slot, silent_fraction,
                                      n_sims=n_sims_os)
 
-            if pr_dist == 'uniform':
-                random_pr_array_sil = np.random.rand(n_sims_os, slots[-1])
-                random_pr_array_nonsil = np.random.rand(n_sims_os, slots[-1])
-
-            elif pr_dist == 'gamma':
-                gamma_shape = 3
-                gamma_rate = 5.8
-                gamma_scale = 1 / gamma_rate
-
-                random_pr_array_sil = np.random.gamma(
-                    gamma_shape, gamma_scale, size=(n_sims_os, slots[-1]))
-                random_pr_array_nonsil = np.random.gamma(
-                    gamma_shape, gamma_scale, size=(n_sims_os, slots[-1]))
+            random_pr_array_sil = pr_dist_sil(size=(n_sims_os, slots[-1]))
+            random_pr_array_nonsil = pr_dist_nonsil(size=(n_sims_os, slots[-1]))
 
             pr_silent = random_pr_array_sil
             pr_nonsilent = random_pr_array_nonsil
@@ -432,7 +471,9 @@ def fra(fh, fd):
     return 1 - np.log(fh) / np.log(fd)
 
 
-def gen_fra_dist(silent_fraction, method='iterative', pr_dist='uniform',
+def gen_fra_dist(silent_fraction, method='iterative',
+                 pr_dist_sil=PrDist(sp_stats.uniform),
+                 pr_dist_nonsil=PrDist(sp_stats.uniform),
                  num_trials=50, n_simulations=10000, n_start=100,
                  zeroing=False, graph_ex=False, verbose=False,
                  unitary_reduction=False, frac_reduction=0.2,
@@ -482,11 +523,12 @@ def gen_fra_dist(silent_fraction, method='iterative', pr_dist='uniform',
             If unitary_reduction is false, then frac_reduction describes the
             fraction of the total n to reduce the recorded population by
             each step.
-        pr_dist : string; 'uniform' or 'gamma'
-            Describes the distribution with which to draw individual synapse
-            release probabilities from. If 'uniform', synapses have equal
-            probability of having release probabilities from 0 to 1. If 'gamma',
-            the distribution is a gamma distribution with params. below.
+        pr_dist_sil : PrDist class instance
+            Describes the distribution with which to draw silent synapse
+            release probabilities from.
+        pr_dist_nonsil : PrDist class instance
+            Describes the distribution with which to draw nonsilent synapse
+            release probabilities from.
         num_trials : int (default  50)
             Number of trials to simulate for each voltage-clamp condition (e.g.)
             hyperpolarized and depolarized.
@@ -531,7 +573,9 @@ def gen_fra_dist(silent_fraction, method='iterative', pr_dist='uniform',
     # First, generate realistic groups of neurons
     nonsilent_syn_group, silent_syn_group, \
         pr_nonsilent_syn_group, pr_silent_syn_group \
-        = draw_subsample(method=method, pr_dist=pr_dist,
+        = draw_subsample(method=method,
+                         pr_dist_sil=pr_dist_sil,
+                         pr_dist_nonsil=pr_dist_nonsil,
                          n_simulations=n_simulations,
                          n_start=n_start,
                          silent_fraction=silent_fraction,
@@ -705,7 +749,7 @@ def power_analysis(fra_dist_1, fra_dist_2, init_guess=2048,
         # For each sample set, perform rank-sum test and store in pvals_temp
         for ind_power in range(inds_fra1_.shape[0]):
             if stat_test == 'ranksum':
-                stat, pval = stats.ranksums(
+                stat, pval = sp_stats.ranksums(
                     fra_dist_1[inds_fra1_[ind_power, :]],
                     fra_dist_2[inds_fra2_[ind_power, :]])
             elif stat_test == 'chisquare':
@@ -724,7 +768,7 @@ def power_analysis(fra_dist_1, fra_dist_2, init_guess=2048,
                 elif obs1_silent_counts + obs2_silent_counts == 0:
                     pval = 1
                 else:
-                    chi2, pval, dof, expected = stats.chi2_contingency(
+                    chi2, pval, dof, expected = sp_stats.chi2_contingency(
                         contingency, correction=False)
 
             pvals_[ind_power] = pval
@@ -764,30 +808,29 @@ def power_analysis(fra_dist_1, fra_dist_2, init_guess=2048,
                 min_samplesize_required = current_guess
                 break
 
-             last_guess_next = current_guess
-             current_guess_next = round(
-                 current_guess + (abs(current_guess - last_guess) / 2))
+            last_guess_next = current_guess
+            current_guess_next = round(
+                current_guess + (abs(current_guess - last_guess) / 2))
 
-             last_guess = last_guess_next
-             current_guess = current_guess_next
+            last_guess = last_guess_next
+            current_guess = current_guess_next
 
-             if final_iter is True:
+            if final_iter is True:
                 min_sample_reached = True
                 min_samplesize_required = last_correct
                 print('\t\t\tn_final: ', str(last_correct))
 
                 break
 
-
     return min_samplesize_required
 
 
 def power_analysis_llr(fra_dist_1, likelihoods,
-                       ind_null_silent_truefrac = 0,
-                       init_guess = 2048,
-                       sample_draws = 2000,
-                       alpha = 0.05, beta = 0.2,
-                       verbosity = True):
+                       ind_null_silent_truefrac=0,
+                       init_guess=2048,
+                       sample_draws=2000,
+                       alpha=0.05, beta=0.2,
+                       verbosity=True):
     """
     Performs a power analysis using loglikelihood ratio testing (Wilks' theorem)
     on a distribution of estimated silent synapse fractions generated from a
@@ -887,51 +930,57 @@ def power_analysis_llr(fra_dist_1, likelihoods,
         given alpha and beta levels of statistical confidence
     """
 
-    #Initialize variables
+    # Initialize variables
     min_sample_reached = False
     current_guess = init_guess
     last_guess = 0
-    last_correct = init_guess #The last correct guess made.
+    last_correct = init_guess  # The last correct guess made.
     final_iter = False
 
-    #Iterate through reductions in sample size
+    # Iterate through reductions in sample size
     while min_sample_reached is False:
         if verbosity is True:
-            print('\t\tn_samples: ', str(current_guess), ' ... ', end = '')
+            print('\t\tn_samples: ', str(current_guess), ' ... ', end='')
 
         if abs(current_guess - last_guess) < 1.5:
             final_iter = True
 
-        #Pick indices for each sample set
+        # Pick indices for each sample set
         fra_subsample = np.random.choice(fra_dist_1,
-                                       size = (sample_draws, current_guess))
+                                       size=(sample_draws, current_guess))
         pvals_ = np.empty([sample_draws])
 
-        #For each draw, compute the max-likelihood estimate
+        # For each draw, compute the max-likelihood estimate
         for ind_ in range(fra_subsample.shape[0]):
-            #Calculate likelihood-array-indices of samples by adding 200 to align to -200:1:100 observations
-            #Compute loglikelihood function given all observations
-            loglikelihood_sum = np.sum(np.log(likelihoods[(fra_subsample[ind_, :]*100+200).astype(np.int), :]), axis = 0)
-            #Calculate argmax of likelihood
+            # Calculate likelihood-array-indices of samples by adding 200 to
+            # align to -200:1:100 observations
+            # Compute loglikelihood function given all observations
+            loglikelihood_sum = np.sum(np.log(likelihoods[
+                (fra_subsample[ind_, :]*100+200).astype(np.int), :]), axis=0)
+            # Calculate argmax of likelihood
             ind_max_likelihood = np.argmax(loglikelihood_sum)
-            if ind_ is 0:
-                plt.figure(); plt.plot(loglikelihood_sum); plt.show()
+            if ind_ == 0:
+                plt.figure()
+                plt.plot(loglikelihood_sum)
+                plt.show()
 
-            #Test statistic
-            D = 2 * (loglikelihood_sum[ind_max_likelihood] - loglikelihood_sum[ind_null_silent_truefrac])
-            pval = stats.distributions.chi2.sf(D, 1)
+            # Test statistic
+            D = 2 * (loglikelihood_sum[ind_max_likelihood]
+                     - loglikelihood_sum[ind_null_silent_truefrac])
+            pval = sp_stats.distributions.chi2.sf(D, 1)
             pvals_[ind_] = pval
 
-        #Calc fraction of draws where pvals_ reaches alpha significance
+        # Calc fraction of draws where pvals_ reaches alpha significance
         fraction_alpha_signif = np.sum(pvals_ < alpha)
 
-        #If beta significance not reached
+        # If beta significance not reached
         if (fraction_alpha_signif / len(pvals_)) > (1 - beta):
             if verbosity is True:
                 print('*')
 
             last_guess_next = current_guess
-            current_guess_next = round(current_guess - (abs(current_guess - last_guess) / 2))
+            current_guess_next = round(
+                current_guess - (abs(current_guess - last_guess) / 2))
 
             last_correct = current_guess
 
@@ -945,40 +994,43 @@ def power_analysis_llr(fra_dist_1, likelihoods,
 
                 break
 
-        #If beta significance reached
+        # If beta significance reached
         elif (fraction_alpha_signif / len(pvals_)) < (1 - beta):
-             if verbosity is True:
-                 print('NS')
+            if verbosity is True:
+                print('NS')
 
-             #Catch for beta significance being reached on the first guess
-             if current_guess == init_guess:
+            # Catch for beta significance being reached on the first guess
+            if current_guess == init_guess:
                 min_sample_reached = True
                 min_samplesize_required = current_guess
                 break
 
-             last_guess_next = current_guess
-             current_guess_next = round(current_guess + (abs(current_guess - last_guess) / 2))
+            last_guess_next = current_guess
+            current_guess_next = round(
+                current_guess + (abs(current_guess - last_guess) / 2))
 
-             last_guess = last_guess_next
-             current_guess = current_guess_next
+            last_guess = last_guess_next
+            current_guess = current_guess_next
 
-             if final_iter is True:
+            if final_iter is True:
                 min_sample_reached = True
                 min_samplesize_required = last_correct
                 print('\t\t\tn_final: ', str(last_correct))
 
                 break
 
-
     return min_samplesize_required
 
 
-def _gen_fra_dist_fails(method = 'iterative', pr_dist = 'uniform', silent_fraction = 0.5,
-                                num_trials = 50, n_simulations = 10000, n_start = 100,
-                                zeroing = False, graph_ex = False, verbose = False,
-                                unitary_reduction = False, frac_reduction = 0.2,
-                                binary_vals = False, failrate_low = 0.2,
-                                failrate_high = 0.8):
+def _gen_fra_dist_fails(method='iterative',
+                        pr_dist_sil=PrDist(sp_stats.uniform),
+                        pr_dist_nonsil=PrDist(sp_stats.uniform),
+                        silent_fraction=0.5,
+                        num_trials=50, n_simulations=10000, n_start=100,
+                        zeroing=False, graph_ex=False, verbose=False,
+                        unitary_reduction=False, frac_reduction=0.2,
+                        binary_vals=False, failrate_low=0.2,
+                        failrate_high=0.8):
     """
     In-progress function to attempt to perform MLE using two variables per
     experiment: Fh and Fd. Here, the numerical simulations are performed and
@@ -986,7 +1038,8 @@ def _gen_fra_dist_fails(method = 'iterative', pr_dist = 'uniform', silent_fracti
     """
 
     if verbose is True:
-        print ('Generating FRA distribution with p(silent) = ', str(silent_fraction), ':')
+        print('Generating FRA distribution with p(silent) = ',
+              str(silent_fraction), ':')
 
     if binary_vals is True:
         fra_calc = np.zeros(n_simulations)
@@ -994,36 +1047,47 @@ def _gen_fra_dist_fails(method = 'iterative', pr_dist = 'uniform', silent_fracti
 
         return fra_calc
 
-    #First, generate realistic groups of neurons
+    # First, generate realistic groups of neurons
     nonsilent_syn_group, silent_syn_group, \
-    pr_nonsilent_syn_group, pr_silent_syn_group \
-    = draw_subsample(method = method, pr_dist = pr_dist,
-                                       n_simulations = n_simulations,
-                                       n_start = n_start,
-                                       silent_fraction = silent_fraction,
-                                       failrate_low = failrate_low,
-                                       failrate_high = failrate_high,
-                                       unitary_reduction = unitary_reduction,
-                                       frac_reduction = frac_reduction,
-                                       verbose = verbose)
+        pr_nonsilent_syn_group, pr_silent_syn_group \
+        = draw_subsample(method=method,
+                         pr_dist_sil=pr_dist_sil,
+                         pr_dist_nonsil=pr_dist_nonsil,
+                         n_simulations=n_simulations,
+                         n_start=n_start,
+                         silent_fraction=silent_fraction,
+                         failrate_low=failrate_low,
+                         failrate_high=failrate_high,
+                         unitary_reduction=unitary_reduction,
+                         frac_reduction=frac_reduction,
+                         verbose=verbose)
 
-    #Calculate p(failure) mathematically for hyperpol, depol based on product of (1- pr)
-    math_failure_rate_hyperpol = np.ma.prod(1 - pr_nonsilent_syn_group, axis = 1).compressed()
+    # Calculate p(failure) mathematically for hyperpol,
+    # depol based on product of (1- pr)
+    math_failure_rate_hyperpol = np.ma.prod(
+        1 - pr_nonsilent_syn_group, axis=1).compressed()
 
-    pr_all_depol = np.ma.append(pr_nonsilent_syn_group, pr_silent_syn_group, axis = 1)
-    math_failure_rate_depol = np.ma.prod(1 - pr_all_depol, axis = 1).compressed()
+    pr_all_depol = np.ma.append(
+        pr_nonsilent_syn_group, pr_silent_syn_group, axis=1)
+    math_failure_rate_depol = np.ma.prod(
+        1 - pr_all_depol, axis=1).compressed()
 
-    #Simulate trials where failure rate is binary, calculate fraction fails
-    sim_failure_rate_hyperpol = np.sum(np.random.rand(n_simulations, num_trials) < np.tile(
-            math_failure_rate_hyperpol, (num_trials, 1)).transpose(), axis = 1) / num_trials
+    # Simulate trials where failure rate is binary, calculate fraction fails
+    sim_failure_rate_hyperpol = np.sum(
+        np.random.rand(n_simulations, num_trials)
+        < np.tile(math_failure_rate_hyperpol, (num_trials, 1)).transpose(),
+        axis=1) / num_trials
 
-    sim_failure_rate_depol = np.sum(np.random.rand(n_simulations, num_trials) < np.tile(
-            math_failure_rate_depol, (num_trials, 1)).transpose(), axis = 1) / num_trials
+    sim_failure_rate_depol = np.sum(
+        np.random.rand(n_simulations, num_trials)
+        < np.tile(math_failure_rate_depol, (num_trials, 1)).transpose(),
+        axis=1) / num_trials
 
-    #Calculate failure rate
-    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) / np.log(sim_failure_rate_depol)
+    # Calculate failure rate
+    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) \
+        / np.log(sim_failure_rate_depol)
 
-    #Filter out oddities
+    # Filter out oddities
     fra_calc[fra_calc == -(np.inf)] = 0
     fra_calc[fra_calc == np.inf] = 0
     fra_calc[fra_calc == np.nan] = 0
@@ -1033,6 +1097,7 @@ def _gen_fra_dist_fails(method = 'iterative', pr_dist = 'uniform', silent_fracti
         fra_calc[fra_calc < 0] = 0
 
     return fra_calc, sim_failure_rate_hyperpol, sim_failure_rate_depol
+
 
 def _mle_fh_fd():
     """
@@ -1056,32 +1121,32 @@ def _mle_fh_fd():
     obs_bins = 0.02
     zeroing = False
 
-    hyp = np.linspace(0, 0.5, num = 200)
-    fra_calc = np.empty(len(hyp), dtype = np.ndarray)
-    fra_fail_h = np.empty(len(hyp), dtype = np.ndarray)
-    fra_fail_d = np.empty(len(hyp), dtype = np.ndarray)
-
+    hyp = np.linspace(0, 0.5, num=200)
+    fra_calc = np.empty(len(hyp), dtype=np.ndarray)
+    fra_fail_h = np.empty(len(hyp), dtype=np.ndarray)
+    fra_fail_d = np.empty(len(hyp), dtype=np.ndarray)
 
     print('Generating FRA calcs...')
     for ind, silent in enumerate(hyp):
         print('\tSilent frac: ', str(silent))
-        #Generate an FRA dist
+        # Generate an FRA dist
         fra_calc[ind], fra_fail_h[ind], fra_fail_d[ind] \
-            = _gen_fra_dist_fails(n_simulations = n_simulations,
-            silent_fraction = silent, zeroing = zeroing)
+            = _gen_fra_dist_fails(n_simulations=n_simulations,
+                                  silent_fraction=silent, zeroing=zeroing)
 
-    #2. Create loglikelihood function for each case
-    obs_fh = np.arange(0, 1, obs_bins) #Bin observations from -200 to 100
-    obs_fd = np.arange(0, 1, obs_bins) #Bin observations from -200 to 100
-
+    # 2. Create loglikelihood function for each case
+    obs_fh = np.arange(0, 1, obs_bins)  # Bin observations from -200 to 100
+    obs_fd = np.arange(0, 1, obs_bins)  # Bin observations from -200 to 100
 
     likelihood = np.empty([len(obs_fh), len(obs_fd), len(hyp)])
 
     for ind_obs_fh, obs_fh_ in enumerate(obs_fh):
         for ind_obs_fd, obs_fd_ in enumerate(obs_fd):
             for ind_hyp, hyp_ in enumerate(hyp):
-                obs_in_range_fh_ = np.where(np.abs(fra_fail_h[ind_hyp] - obs_fh_) < obs_bins/2)[0]
-                obs_in_range_fd_ = np.where(np.abs(fra_fail_d[ind_hyp] - obs_fd_) < obs_bins/2)[0]
+                obs_in_range_fh_ = np.where(
+                    np.abs(fra_fail_h[ind_hyp] - obs_fh_) < obs_bins/2)[0]
+                obs_in_range_fd_ = np.where(
+                    np.abs(fra_fail_d[ind_hyp] - obs_fd_) < obs_bins/2)[0]
 
                 obs_in_range_both = set(obs_in_range_fh_) \
                     - (set(obs_in_range_fh_) - set(obs_in_range_fd_))
@@ -1089,16 +1154,18 @@ def _mle_fh_fd():
                 p_obs = len(obs_in_range_both) / len(fra_fail_h[ind_hyp])
 
                 likelihood[ind_obs_fh, ind_obs_fd, ind_hyp] = p_obs
-    likelihood += 0.0001 #Set likelihoods microscopically away from 0 to avoid log(0) errors
+    likelihood += 0.0001
+    # (Set likelihoods microscopically away from 0 to avoid log(0) errors)
 
-    #-----------------------------
-    #Plotting
-    #-----------------------------
+    # -----------------------------
+    # Plotting
+    # -----------------------------
     plt.style.use('presentation_ml')
 
-    fig = plt.figure(figsize = (10, 6))
-    spec = gridspec.GridSpec(nrows = 2, ncols = 3,
-        height_ratios = [1, 0.2], width_ratios = [0.2, 1, 1])
+    fig = plt.figure(figsize=(10, 6))
+    spec = gridspec.GridSpec(nrows=2, ncols=3,
+                             height_ratios=[1, 0.2],
+                             width_ratios=[0.2, 1, 1])
 
     p_silent_1 = 0.1
     ind_psil_1 = np.abs(hyp - p_silent_1).argmin()
@@ -1107,38 +1174,38 @@ def _mle_fh_fd():
 
     ax_failcomp = fig.add_subplot(spec[0, 1])
     ax_failcomp.plot(fra_fail_h[ind_psil_1], fra_fail_d[ind_psil_1], '.',
-        color = plt.cm.RdBu(0.2), alpha = 0.1)
+                     color=plt.cm.RdBu(0.2), alpha=0.1)
     ax_failcomp.plot(fra_fail_h[ind_psil_2], fra_fail_d[ind_psil_1], '.',
-        color = plt.cm.RdBu(0.8), alpha = 0.1)
-
+                     color=plt.cm.RdBu(0.8), alpha=0.1)
 
     ax_failcomp_fd = fig.add_subplot(spec[0, 0])
     ax_failcomp_fh = fig.add_subplot(spec[1, 1])
 
-    ax_failcomp_fh.hist(fra_fail_h[ind_psil_1], bins = 50,
-        density = True, facecolor = plt.cm.RdBu(0.2), alpha = 0.5)
-    ax_failcomp_fh.hist(fra_fail_h[ind_psil_2], bins = 50,
-        density = True, facecolor = plt.cm.RdBu(0.8), alpha = 0.5)
+    ax_failcomp_fh.hist(fra_fail_h[ind_psil_1], bins=50,
+                        density=True, facecolor=plt.cm.RdBu(0.2), alpha=0.5)
+    ax_failcomp_fh.hist(fra_fail_h[ind_psil_2], bins=50,
+                        density=True, facecolor=plt.cm.RdBu(0.8), alpha=0.5)
 
-    ax_failcomp_fd.hist(fra_fail_d[ind_psil_1], orientation = 'horizontal', bins = 50,
-        density = True, facecolor = plt.cm.RdBu(0.2), alpha = 0.5)
-    ax_failcomp_fd.hist(fra_fail_d[ind_psil_2], orientation = 'horizontal', bins = 50,
-        density = True, color = plt.cm.RdBu(0.8), alpha = 0.5)
+    ax_failcomp_fd.hist(fra_fail_d[ind_psil_1],
+                        orientation='horizontal', bins=50,
+                        density=True, facecolor=plt.cm.RdBu(0.2), alpha=0.5)
+    ax_failcomp_fd.hist(fra_fail_d[ind_psil_2],
+                        orientation='horizontal', bins=50,
+                        density=True, color=plt.cm.RdBu(0.8), alpha=0.5)
     ax_failcomp_fh.set_xlabel('$F_{h}$')
     ax_failcomp_fh.set_ylabel('pdf')
     ax_failcomp_fd.set_ylabel('$F_{d}$')
     ax_failcomp_fd.set_xlabel('pdf')
 
-
-    #---------
+    # ---------
     ax_likelihood = fig.add_subplot(spec[:, 2])
 
     n_sims_ex = 20
     silent_frac_ex = 0.2
 
     fra_calc_ex, fra_fail_h_ex, fra_fail_d_ex \
-        = _gen_fra_dist_fails(n_simulations = n_sims_ex,
-        silent_fraction = silent_frac_ex, zeroing = False)
+        = _gen_fra_dist_fails(n_simulations=n_sims_ex,
+                              silent_fraction=silent_frac_ex, zeroing=False)
 
     joint_llhood = np.zeros(len(hyp))
     for ind in range(len(fra_fail_h_ex)):

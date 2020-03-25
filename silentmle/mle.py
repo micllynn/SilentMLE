@@ -1,3 +1,11 @@
+"""
+mle.py: Contains main class for running maximum likelihood analysis.
+
+Author: mbfl
+Date: 19.9
+"""
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,7 +17,87 @@ from .core import *
 
 
 class Estimator(object):
-    """A max-likelihood estimator object for silent synapses.
+    """A max-likelihood estimator object for silent synapse fraction.
+
+    When initialized, generates a set of likelihood functions from
+    constrained experimental simulations. The numerically simulated
+    likelihood functions, along with observation and hypothesis vectors,
+    are stored as attributes in the class instance.
+
+    Parameters
+    ----------
+    n_simulations : int
+        Number of simulated experiments to perform for each hypothesis
+    n_likelihood_points : int
+        The number of discrete points in the hypothesis-space (values for
+        fraction silent synapses) to simulate
+    obs_bins  : float
+        Bin width for aligning observations to the nearest simulated
+        observation
+    zeroing : bool
+        Denotes whether the observations should be zeroed in the simulation
+        (eg negative values artificially set to 0 or not). Simulation and
+        experiment should match here.
+
+    **kwargs : experimental constraint parameters. Any of these can be used.
+        method : string; can be 'iterative' or 'rand'
+            Describes the method for experimental simulation. If
+            'iterative' (default), an experimental ensemble of synapses is
+            generated through stepwise reduction of some large synapse
+            set until a criterion in terms of failure rate is reached.
+            If 'rand', an ensemble of synapses is generated mathematically
+            through stochastic picking of a small synapse set (i.e. no
+            steps and no history involved). 'rand' should provide small
+            synapse ensembles that, on average, are faithful subsamples of
+            the larger population. 'iterative' imposes some experimental
+            bias on the subsamples.
+        unitary_reduction : bool
+            If method = 'iterative', determines whether synapses are
+            eliminated one at a time from the experimental ensembles
+            (True), or eliminated in fractional chunks proportional to the
+            total n (False).
+        frac_reduction : float
+            If unitary_reduction is false, then frac_reduction describes
+            the fraction of the total n to reduce the recorded population
+            by during each step.
+        pr_dist_sil : PrDist class instance
+            Describes the distribution with which to draw silent synapse
+            release probabilities from.
+        pr_dist_nonsil : PrDist class instance
+            Describes the distribution with which to draw nonsilent synapse
+            release probabilities from.
+        num_trials : int (default is 50)
+            Number of trials to simulate for each voltage-clamp condition
+            (e.g.) hyperpolarized and depolarized. Default is 50.
+        failrate_low : float (default 0.2)
+            The lower bound of hyperpolarized failure rates to accept for the
+            synapse ensembles (a theoretical calculation based on release
+            probabilities of all synapses - individual experiments may differ
+            slightly from this).
+        failrate_high : float (default 0.8)
+            The upper bound of hyperpolarized failure rates to accept for the
+            synapse ensembles (a theoretical calculation based on release
+            probabilities of all synapses - individual experiments may differ
+            slightly from this).
+        n_start : int (default 100)
+            The number of synapses to start with for the experimental down-
+            sampling. Since ~3-6 nonsilent synapses are typically reached, the
+            precise value of n_start does not carry much practical importance.
+        graph_ex : boolean (default False)
+            Whether to plot an example of the experimental synapse
+            downsampling.
+        verbose : boolean (default False)
+            Toggles verbosity for the simulation on and off for troubleshooting
+            or for use during large-scale simulations.
+
+    Returns
+    --------
+    self.params : dict
+        Stores all params (including those passed by **kwargs)
+        in a dictionary.
+    self.obs : np.array
+        Stores the observation values used to perform the likelihood
+
 
     Attributes
     --------
@@ -28,95 +116,11 @@ class Estimator(object):
     params : dict
         A dictionary of experimental and simulation parameters which were used
         to generate self.likelihood.
-
-    Methods
-    --------
-    estimate(data, dtype = 'est')
-        Performs maximum likelihood estimation on data using self.likelihood,
-        where data is either in the form of FRA estimates (dtype = 'est') or in
-        the form of raw failure rates (dtype = 'failrate')
     """
 
     def __init__(self, n_simulations=5000, n_likelihood_points=500,
                  obs_bins=0.02, zeroing=False, **kwargs):
-        """
-        Initializes an instance of the MLESilent class and generates a set of
-        likelihood functions from constrained experimental simulations. The
-        numerically simulated likelihood functions, along with observation
-        and hypothesis vectors, are stored as attributes in the class instance.
 
-        Parameters
-        ----------
-        n_simulations : int
-            Number of simulated experiments to perform for each hypothesis
-        n_likelihood_points : int
-            The number of discrete points in the hypothesis-space (values for
-            fraction silent synapses) to simulate
-        obs_bins  : float
-            Bin width for aligning observations to the nearest simulated
-            observation
-        zeroing : bool
-            Denotes whether the observations should be zeroed in the simulation
-            (eg negative values artificially set to 0 or not). Simulation and
-            experiment should match here.
-
-        **kwargs : experimental constraint parameters
-            method : string; can be 'iterative' or 'rand'
-                Describes the method for experimental simulation. If
-                'iterative' (default), an experimental ensemble of synapses is
-                generated through stepwise reduction of some large synapse
-                set until a criterion in terms of failure rate is reached.
-                If 'rand', an ensemble of synapses is generated mathematically
-                through stochastic picking of a small synapse set (i.e. no
-                steps and no history involved). 'rand' should provide small
-                synapse ensembles that, on average, are faithful subsamples of
-                the larger population. 'iterative' imposes some experimental
-                bias on the subsamples.
-            unitary_reduction : bool
-                If method = 'iterative', determines whether synapses are eliminated
-                one at a time from the experimental ensembles (true), or are
-                eliminated in fractional chunks proportional to the total n (false).
-            frac_reduction : float
-                If unitary_reduction is false, then frac_reduction describes the
-                fraction of the total n to reduce the recorded population by
-                each step.
-            pr_dist : string; can be 'uniform' or 'gamma'
-                Describes the distribution with which to draw individual synapse
-                release probabilities from. If 'uniform', synapses have equal
-                probability of having release probabilities from 0 to 1. If 'gamma',
-                the distribution is a gamma distribution with params. below.
-            num_trials : int (default is 50)
-                Number of trials to simulate for each voltage-clamp condition (e.g.)
-                hyperpolarized and depolarized. Default is 50.
-            failrate_low : float (default 0.2)
-                The lower bound of hyperpolarized failure rates to accept for the
-                synapse ensembles (a theoretical calculation based on release
-                probabilities of all synapses - individual experiments may differ
-                slightly from this).
-            failrate_high : float (default 0.8)
-                The upper bound of hyperpolarized failure rates to accept for the
-                synapse ensembles (a theoretical calculation based on release
-                probabilities of all synapses - individual experiments may differ
-                slightly from this).
-            n_start : int (default 100)
-                The number of synapses to start with for the experimental down-
-                sampling. Since ~3-6 nonsilent synapses are typically reached, the
-                precise value of n_start does not carry much practical importance.
-            graph_ex : boolean (default False)
-                Whether to plot an example of the experimental synapse downsampling.
-            verbose : boolean (default False)
-                Toggles verbosity for the simulation on and off for troubleshooting
-                or for use during large-scale simulations.
-
-        Returns
-        --------
-        self.params : dict
-            Stores all params (including those passed by **kwargs)
-            in a dictionary.
-        self.obs : np.array
-            Stores the observation values used to perform the likelihood
-
-        """
         print('\nNew Estimator\n----------------------')
 
         # Store a dict of args/params in the attribute .params
@@ -127,7 +131,6 @@ class Estimator(object):
                                      obs_bins, zeroing]):
             self.params[param_names[ind]] = param
         self.params.update(**kwargs)
-
 
         # 1. Generate observations (est. frac. silent) resulting from each
         # hypothesis (frac. silent)
@@ -156,7 +159,7 @@ class Estimator(object):
 
             for ind_hyp, hyp_ in enumerate(hyp):
                 # Calculate simulated observations which fall within half an
-                # obs_bin of the current obs (ie obs is the closest obs for them).
+                # obs_bin of the current obs (ie obs is the closest to them).
                 obs_in_range = np.where(
                     np.abs(fra_calc[ind_hyp] - obs_) < obs_bins/2)[0]
                 p_obs = len(obs_in_range) / len(fra_calc[ind_hyp])
@@ -203,7 +206,6 @@ class Estimator(object):
         joint_likelihood : np.ndarray
             The joint likelihood function across all data. Values are indexed
             to self.hyp (hypothesis space, or silent synapse fractions).
-
         """
         print('\nRunning MLE on data\n----------------------')
 
