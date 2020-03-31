@@ -8,6 +8,7 @@ Date: 19.9
 import os
 import numpy as np
 import scipy.stats as sp_stats
+import h5py
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -19,8 +20,10 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 try:
     from .core import *
+    from .mle import *
 except ModuleNotFoundError:
     from silentmle.core import *
+    from silentmle.mle import *
 
 # Define global colormap for red_blue
 cm_ = sns.diverging_palette(240, 15, l=45, s=90, center="dark", as_cmap=True)
@@ -36,6 +39,8 @@ def plot_fig1(figname='Figure1.pdf',
 
     try:
         plt.style.use('publication_pnas_ml')
+    except FileNotFoundError:
+        pass
 
     fig = plt.figure(constrained_layout=True)
     fig.set_figheight(6.5)
@@ -278,12 +283,13 @@ def plot_fig1_S1(figname='Figure1_S1.pdf',
                  bins_=np.arange(-150, 50, 10)):
 
     bins_ = np.arange(-150, 50, 10)
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8, 8))
 
-    fig.set_figheight(8)
-    fig.set_figwidth(8)
     try:
         plt.style.use('publication_ml')
+    except FileNotFoundError:
+        pass
+
     plt.rc('font', size=fontsize)
 
     # Define spec for entire fig
@@ -386,9 +392,11 @@ def plot_fig1_S1(figname='Figure1_S1.pdf',
         fails_ = np.sum(np.random.rand(50, 10000) < (1 - pr_), axis=0) / 50
         fails_dp_ = np.sum(np.random.rand(50, 10000) < (1 - pr_), axis=0) / 50
 
-        calc_ = (1 - np.log(fails_) / np.log(fails_dp_)) * 100
-        calc_ = calc_[~np.isnan(calc_)]
-        calc_ = calc_[~np.isinf(calc_)]
+        calc_ = fra(fails_, fails_dp_) * 100
+
+        # calc_ = (1 - np.log(fails_) / np.log(fails_dp_)) * 100
+        # calc_ = calc_[~np.isnan(calc_)]
+        # calc_ = calc_[~np.isinf(calc_)]
 
         fails_sd[ind] = np.std(fails_)
         calc_sd[ind] = np.std(calc_)
@@ -633,6 +641,8 @@ def plot_fig1_S2(figname='Figure1_S2.pdf', fontsize=9, alpha_=0.9):
     fig.set_figwidth(8)
     try:
         plt.style.use('publication_ml')
+    except FileNotFoundError:
+        pass
     plt.rc('font', size=fontsize)
 
     # Define spec for entire fig
@@ -1030,6 +1040,8 @@ def plot_fig2(silent_fraction_low=0.1,
     fig.set_figwidth(3.43)
     try:
         plt.style.use('publication_pnas_ml')
+    except FileNotFoundError:
+        pass
     fontsize = 8
     plt.rc('font', size=fontsize)  # controls default text sizes
 
@@ -1675,6 +1687,8 @@ def plot_fig4(n_true_silents=26,
     ###########################################################################
     try:
         plt.style.use('publication_pnas_ml')
+    except FileNotFoundError:
+        pass
     lw_ = 1  # universal linewidth argument passed to each plot
 
     fig = plt.figure(constrained_layout=True)
@@ -1975,7 +1989,151 @@ def plot_fig4(n_true_silents=26,
     return
 
 
-# ** _old_fig4:
+def plot_figS7(fname_data, ind_ex_data=1,
+               est_simulations=10000,
+               est_likelihood_pts=200,
+               est_smooth_window=0.1,
+               est_smooth_polyorder=3,
+               n_redo_estimation=1):
+
+    """Plots figure S7 (MLE on experimental silent estimates).
+    """
+    # Analyze
+    # ----------
+    # Import data
+    with h5py.File(fname_data) as f:
+        fra_est_experim = f['sscalcs'][:] / 100
+
+    # Analyze data
+    if n_redo_estimation == 1:
+        est = Estimator(n_simulations=est_simulations,
+                        n_likelihood_points=est_likelihood_pts)
+        joint_lhood_all = est.estimate(data=fra_est_experim,
+                                       dtype='est',
+                                       plot_joint_likelihood=False,
+                                       smooth_window=est_smooth_window,
+                                       smooth_polyorder=est_smooth_polyorder)
+        joint_lhood_all /= np.max(joint_lhood_all)
+
+    elif n_redo_estimation > 1:
+        mle_all = np.empty(n_redo_estimation)
+        for ind in range(n_redo_estimation):
+            est = Estimator(n_simulations=est_simulations,
+                            n_likelihood_points=est_likelihood_pts)
+            joint_lhood_all = est.estimate(data=fra_est_experim,
+                                           dtype='est',
+                                           plot_joint_likelihood=False,
+                                           smooth_window=est_smooth_window,
+                                           smooth_polyorder=est_smooth_polyorder)
+            joint_lhood_all /= np.max(joint_lhood_all)
+            mle_all[ind] = est.hyp[np.argmax(joint_lhood_all)]
+
+    joint_lhood_ex = est.estimate(data=[fra_est_experim[ind_ex_data]],
+                                  dtype='est',
+                                  plot_joint_likelihood=False,
+                                  smooth_window=est_smooth_window,
+                                  smooth_polyorder=est_smooth_polyorder)
+    # Get max-likelihood estimate value for silent fraction
+    ind_mle = np.argmax(joint_lhood_all)
+    mle = est.hyp[ind_mle]
+
+    # Plot figure
+    # ----------
+    color_blue = sns.diverging_palette(
+        240, 15, l=45, s=90, center="dark", as_cmap=True)(0)
+
+    plt.style.use('publication_ml')
+    plt.rc('font', size=12)
+
+    fig = plt.figure(figsize=(5, 5), constrained_layout=True)
+    spec_all = gridspec.GridSpec(nrows=2, ncols=2,
+                                 figure=fig)
+
+    ax_lhood_ex = fig.add_subplot(spec_all[0, 0])
+    ax_lhood_all = fig.add_subplot(spec_all[0, 1])
+    ax_mle_hist = fig.add_subplot(spec_all[1, :])
+    ylim_max = 0.5
+    ind_ylim_max = np.argmin(np.abs(ylim_max - est.hyp))
+
+    # 1. likelihood function of single experiment
+    ax_lhood_ex.plot(est.hyp[0:ind_ylim_max] * 100,
+                     joint_lhood_ex[0:ind_ylim_max],
+                     color=color_blue)
+    ax_lhood_ex.set_xlabel('ground truth silent (%)')
+    ax_lhood_ex.set_ylabel('likelihood (norm.)')
+
+    # 2. Joint likelihood function of all experiments
+    ax_lhood_all.plot(est.hyp[0:ind_ylim_max] * 100,
+                      joint_lhood_all[0:ind_ylim_max],
+                      color=color_blue)
+    ax_lhood_all.plot([mle*100, mle*100], [0, 1],
+                      color=[0.85, 0.1, 0.2])
+    ax_lhood_all.text(0.5, 0.6,
+                      'Max-likelihood \nestimate: ' +
+                      str(format(mle * 100, '.1f')) + '%',
+                      color=[0.85, 0.1, 0.2],
+                      transform=ax_lhood_all.transAxes,
+                      horizontalalignment='left')
+    ax_lhood_all.set_xlabel('ground truth silent (%)')
+    ax_lhood_all.set_ylabel('likelihood (norm.)')
+
+    # 3. Histogram of best estimate superimposed on distribution
+    fra_dist_mle = est.fra_dists[ind_mle] * 100
+    bins_hist = np.arange(-100, 100, 20)
+    ax_mle_hist.hist(fra_est_experim*100,
+                     bins=bins_hist,
+                     weights=np.ones_like(fra_est_experim) /
+                     len(fra_est_experim),
+                     histtype='stepfilled',
+                     edgecolor=[1, 1, 1],
+                     facecolor=color_blue,
+                     linewidth=1,
+                     alpha=0.6)
+    ax_mle_hist.hist(fra_dist_mle,
+                     bins=bins_hist,
+                     weights=np.ones_like(fra_dist_mle) /
+                     len(fra_dist_mle),
+                     histtype='step',
+                     edgecolor=[0.85, 0.1, 0.2],
+                     linewidth=2,
+                     alpha=0.9)
+
+    # 4. Print out the pval for KS test between the distributions
+    stat, pval = sp_stats.ks_2samp(fra_dist_mle, fra_est_experim*100)
+    print('KS test between exp. and MLE theor. dist: ' +
+          str(format(pval, '.2f')))
+    print('Mean of exp. distribution: ' +
+          str(format(np.mean(fra_est_experim)*100, '.3f')))
+    ax_mle_hist.set_xlim([-100, 100])
+    ax_mle_hist.xaxis.set_ticks(np.linspace(-100, 100, 5))
+    ax_mle_hist.spines['right'].set_visible(False)
+    ax_mle_hist.spines['top'].set_visible(False)
+    ax_mle_hist.yaxis.set_ticks_position('left')
+    ax_mle_hist.xaxis.set_ticks_position('bottom')
+    ax_mle_hist.set_xlabel('Estimated silent (%)')
+    ax_mle_hist.set_ylabel('pdf')
+
+    spec_all.tight_layout(fig)
+    plt.savefig('FigS7.pdf')
+
+    if n_redo_estimation > 1:
+        fig2 = plt.figure(figsize=(3, 3))
+        ax_multiest = fig2.add_subplot(1, 1, 1)
+        ax_multiest.hist(mle_all, bins=20,
+                         weights=np.ones_like(mle_all) /
+                         len(mle_all),
+                         histtype='step',
+                         edgecolor=color_blue)
+        ax_multiest.set_xlabel('estimate (% silent)')
+        ax_multiest.set_ylabel('pdf')
+        fig2.savefig('FigReview4.pdf')
+
+        mle_all_stdev = np.std(mle_all)
+        print(f'multiple estimation stdev: {mle_all_stdev}%')
+
+    plt.show()
+
+
 def _old_plot_fig4(n_true_silents=26,
                    fontsize=8,
                    sample_draws=5000,
@@ -2239,6 +2397,8 @@ def _old_plot_fig4(n_true_silents=26,
     ###########################################################################
     try:
         plt.style.use('publication_pnas_ml')
+    except FileNotFoundError:
+        pass
     lw_ = 1  # universal linewidth argument passed to each plot
 
     fig = plt.figure(constrained_layout=True)
@@ -2827,235 +2987,3 @@ def plot_fig4_suppLLR(n_true_silents=100,
     plt.savefig(path_f)
 
     return
-
-# * test fns:
-
-# ** _gen_fra_dist_fails:
-
-
-def _gen_fra_dist_fails(method='iterative',
-                        pr_dist_sil=PrDist(sp_stats.uniform),
-                        pr_dist_nonsil=PrDist(sp_stats.uniform),
-                        silent_fraction=0.5,
-                        num_trials=50,
-                        n_simulations=10000,
-                        n_start=100,
-                        zeroing=False,
-                        graph_ex=False,
-                        verbose=False,
-                        unitary_reduction=False,
-                        frac_reduction=0.2,
-                        binary_vals=False,
-                        failrate_low=0.2,
-                        failrate_high=0.8):
-    '''
-    In-progress function to attempt to perform MLE using two variables per
-    experiment: Fh and Fd. Here, the numerical simulations are performed and
-    an estimate distribution along with failure rate distributions
-    are returned.
-    '''
-
-    if verbose is True:
-        print('Generating FRA distribution with p(silent) = ',
-              str(silent_fraction), ':')
-
-    if binary_vals is True:
-        fra_calc = np.zeros(n_simulations)
-        fra_calc[0:int(silent_fraction * n_simulations)] = 1
-
-        return fra_calc
-
-    # First, generate realistic groups of neurons
-    nonsilent_syn_group, silent_syn_group, \
-        pr_nonsilent_syn_group, pr_silent_syn_group \
-        = draw_subsample(method=method,
-                         pr_dist_sil=pr_dist_sil,
-                         pr_dist_nonsil=pr_dist_nonsil,
-                         n_simulations=n_simulations,
-                         n_start=n_start,
-                         silent_fraction=silent_fraction,
-                         failrate_low=failrate_low,
-                         failrate_high=failrate_high,
-                         unitary_reduction=unitary_reduction,
-                         frac_reduction=frac_reduction,
-                         verbose=verbose)
-
-    # Calculate p(failure) mathematically for hyperpol, depol
-    # based on product of (1- pr)
-    math_failure_rate_hyperpol = np.ma.prod(1 - pr_nonsilent_syn_group,
-                                            axis=1).compressed()
-
-    pr_all_depol = np.ma.append(pr_nonsilent_syn_group,
-                                pr_silent_syn_group,
-                                axis=1)
-    math_failure_rate_depol = np.ma.prod(1 - pr_all_depol, axis=1).compressed()
-
-    # Simulate trials where failure rate is binary, calculate fraction fails
-    sim_failure_rate_hyperpol = np.sum(np.random.rand(
-        n_simulations, num_trials) < np.tile(math_failure_rate_hyperpol,
-                                             (num_trials, 1)).transpose(),
-                                       axis=1) / num_trials
-
-    sim_failure_rate_depol = np.sum(np.random.rand(n_simulations, num_trials) <
-                                    np.tile(math_failure_rate_depol,
-                                            (num_trials, 1)).transpose(),
-                                    axis=1) / num_trials
-
-    # Calculate failure rate
-    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) / np.log(
-        sim_failure_rate_depol)
-
-    # Filter out oddities
-    fra_calc[fra_calc == -(np.inf)] = 0
-    fra_calc[fra_calc == np.inf] = 0
-    fra_calc[fra_calc == np.nan] = 0
-    fra_calc = np.nan_to_num(fra_calc)
-
-    if zeroing is True:
-        fra_calc[fra_calc < 0] = 0
-
-    return fra_calc, sim_failure_rate_hyperpol, sim_failure_rate_depol
-
-
-# ** mle based on fh, fd:
-def _mle_fh_fd():
-    '''
-    Attempt to use pairs of observations (fh, fd) as inputs to a likelihood
-    function for MLE.
-
-    The idea would be that two obs. may provide better estimation ability than
-    simply a single obs. (estimated failure rate through the FRA
-    equation).
-
-    However, as below shows, it is A) computationally intractable due to the
-    fact that much more data has to be simulated to get smooth estimates for
-    the frequency of (fh, fd) as a function of each hypothesis; and B) does not
-    appear to provide significantly better estimation since fh is distributed
-    identically across the hypothesis space.
-
-    (However, for b), further work is probably needed...)
-
-    '''
-    n_simulations = 20000
-    obs_bins = 0.02
-    zeroing = False
-
-    hyp = np.linspace(0, 0.5, num=200)
-    fra_calc = np.empty(len(hyp), dtype=np.ndarray)
-    fra_fail_h = np.empty(len(hyp), dtype=np.ndarray)
-    fra_fail_d = np.empty(len(hyp), dtype=np.ndarray)
-
-    print('Generating FRA calcs...')
-    for ind, silent in enumerate(hyp):
-        print('\tSilent frac: ', str(silent))
-        # Generate an FRA dist
-        fra_calc[ind], fra_fail_h[ind], fra_fail_d[ind] \
-            = _gen_fra_dist_fails(n_simulations=n_simulations,
-                                  silent_fraction=silent, zeroing=zeroing)
-
-    # 2. Create loglikelihood function for each case
-    obs_fh = np.arange(0, 1, obs_bins)  # Bin observations from -200 to 100
-    obs_fd = np.arange(0, 1, obs_bins)  # Bin observations from -200 to 100
-
-    likelihood = np.empty([len(obs_fh), len(obs_fd), len(hyp)])
-
-    for ind_obs_fh, obs_fh_ in enumerate(obs_fh):
-        for ind_obs_fd, obs_fd_ in enumerate(obs_fd):
-            for ind_hyp, hyp_ in enumerate(hyp):
-                obs_in_range_fh_ = np.where(
-                    np.abs(fra_fail_h[ind_hyp] - obs_fh_) < obs_bins / 2)[0]
-                obs_in_range_fd_ = np.where(
-                    np.abs(fra_fail_d[ind_hyp] - obs_fd_) < obs_bins / 2)[0]
-
-                obs_in_range_both = set(obs_in_range_fh_) \
-                    - (set(obs_in_range_fh_) - set(obs_in_range_fd_))
-
-                p_obs = len(obs_in_range_both) / len(fra_fail_h[ind_hyp])
-
-                likelihood[ind_obs_fh, ind_obs_fd, ind_hyp] = p_obs
-    # Set likelihoods microscopically away from 0 to avoid log(0) errors
-    likelihood += 0.0001
-
-    # -----------------------------
-    # Plotting
-    # -----------------------------
-    plt.style.use('presentation_ml')
-
-    fig = plt.figure(figsize=(10, 6))
-    spec = gridspec.GridSpec(nrows=2,
-                             ncols=3,
-                             height_ratios=[1, 0.2],
-                             width_ratios=[0.2, 1, 1])
-
-    p_silent_1 = 0.1
-    ind_psil_1 = np.abs(hyp - p_silent_1).argmin()
-    p_silent_2 = 0.4
-    ind_psil_2 = np.abs(hyp - p_silent_2).argmin()
-
-    ax_failcomp = fig.add_subplot(spec[0, 1])
-    ax_failcomp.plot(fra_fail_h[ind_psil_1],
-                     fra_fail_d[ind_psil_1],
-                     '.',
-                     color=plt.cm.RdBu(0.2),
-                     alpha=0.1)
-    ax_failcomp.plot(fra_fail_h[ind_psil_2],
-                     fra_fail_d[ind_psil_1],
-                     '.',
-                     color=plt.cm.RdBu(0.8),
-                     alpha=0.1)
-
-    ax_failcomp_fd = fig.add_subplot(spec[0, 0])
-    ax_failcomp_fh = fig.add_subplot(spec[1, 1])
-
-    ax_failcomp_fh.hist(fra_fail_h[ind_psil_1],
-                        bins=50,
-                        density=True,
-                        facecolor=plt.cm.RdBu(0.2),
-                        alpha=0.5)
-    ax_failcomp_fh.hist(fra_fail_h[ind_psil_2],
-                        bins=50,
-                        density=True,
-                        facecolor=plt.cm.RdBu(0.8),
-                        alpha=0.5)
-
-    ax_failcomp_fd.hist(fra_fail_d[ind_psil_1],
-                        orientation='horizontal',
-                        bins=50,
-                        density=True,
-                        facecolor=plt.cm.RdBu(0.2),
-                        alpha=0.5)
-    ax_failcomp_fd.hist(fra_fail_d[ind_psil_2],
-                        orientation='horizontal',
-                        bins=50,
-                        density=True,
-                        color=plt.cm.RdBu(0.8),
-                        alpha=0.5)
-    ax_failcomp_fh.set_xlabel('$F_{h}$')
-    ax_failcomp_fh.set_ylabel('pdf')
-    ax_failcomp_fd.set_ylabel('$F_{d}$')
-    ax_failcomp_fd.set_xlabel('pdf')
-
-    # ---------
-    ax_likelihood = fig.add_subplot(spec[:, 2])
-
-    n_sims_ex = 20
-    silent_frac_ex = 0.2
-
-    fra_calc_ex, fra_fail_h_ex, fra_fail_d_ex \
-        = _gen_fra_dist_fails(n_simulations=n_sims_ex,
-                              silent_fraction=silent_frac_ex,
-                              zeroing=False)
-
-    joint_llhood = np.zeros(len(hyp))
-    for ind in range(len(fra_fail_h_ex)):
-        ind_fh = np.abs(fra_fail_h_ex[ind] - obs_fh).argmin()
-        ind_fd = np.abs(fra_fail_d_ex[ind] - obs_fd).argmin()
-
-        llhood_ = np.log(likelihood[ind_fh, ind_fd, :])
-        joint_llhood += llhood_
-    joint_lhood = np.exp(joint_llhood)
-
-    ax_likelihood.plot(hyp, joint_lhood)
-    ax_likelihood.set_xlabel('silent fraction')
-    ax_likelihood.set_ylabel('likelihood')
-    ax_likelihood.set_xlim([0, 0.5])

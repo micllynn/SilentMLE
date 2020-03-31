@@ -278,10 +278,12 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
 
             # Remove synapse and correct for those that go below 0
             ind_remove_silent = np.ma.where(sil_syn_to_remove == 1)[0]
+            ind_remove_silent[ind_remove_silent < 0] = 0
             silent_syn_group[ind_remove_silent] -= 1
             silent_syn_group[silent_syn_group < 0] = 0  # Remove below 0
 
             ind_remove_nonsilent = np.ma.where(sil_syn_to_remove == 0)[0]
+            ind_remove_nonsilent[ind_remove_nonsilent < 0] = 0
             nonsilent_syn_group[ind_remove_nonsilent] -= 1
 
             # Update release probabilities
@@ -465,10 +467,13 @@ def fra(fh, fd):
 
     Returns
     -------
-    est : float
+    fra_est : float
         An estimate of fraction silent synapses in the synapse population.
     """
-    return 1 - np.log(fh) / np.log(fd)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        fra_est = 1 - np.log(fh) / np.log(fd)
+
+    return fra_est
 
 
 def gen_fra_dist(silent_fraction, method='iterative',
@@ -607,8 +612,8 @@ def gen_fra_dist(silent_fraction, method='iterative',
             (num_trials, 1)).transpose(), axis=1) / num_trials
 
     # Calculate failure rate
-    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) \
-        / np.log(sim_failure_rate_depol)
+    fra_calc = fra(sim_failure_rate_hyperpol,
+                   sim_failure_rate_depol)
 
     # Filter out oddities
     fra_calc[fra_calc == -(np.inf)] = 0
@@ -1084,8 +1089,8 @@ def _gen_fra_dist_fails(method='iterative',
         axis=1) / num_trials
 
     # Calculate failure rate
-    fra_calc = 1 - np.log(sim_failure_rate_hyperpol) \
-        / np.log(sim_failure_rate_depol)
+    fra_calc = fra(sim_failure_rate_hyperpol,
+                   sim_failure_rate_depol)
 
     # Filter out oddities
     fra_calc[fra_calc == -(np.inf)] = 0

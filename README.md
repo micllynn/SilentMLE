@@ -56,8 +56,8 @@ possible parameters can be found in the full class documentation of
 `sil.Estimator`, accessible through `help(sil.Estimator)`. As an example:
 ```python
 estimator = sil.Estimator(n_likelihood_points=500,
-      pr_dist_sil=PrDist(sp_stats.uniform),
-	  pr_dist_nonsil=PrDist(sp_stats.uniform),
+      pr_dist_sil=sil.PrDist(sp_stats.uniform),
+	  pr_dist_nonsil=sil.PrDist(sp_stats.uniform),
 	  num_trials=100, failrate_low=0.4,
       failrate_high=0.6)
 ```
@@ -76,7 +76,9 @@ The numerically simulated likelihood function is stored as `estimator.likelihood
 More advanced control of the Pr distributions is available with the
 PrDist class, which is passed as an argument to the Estimator() class:
 ```python
-pr_dist = PrDist(dist=sp_stats.gamma,
+import scipy.stats as sp_stats
+
+pr_dist = sil.PrDist(dist=sp_stats.gamma,
 	args={'a':1, 'scale':1/5.8})
 	
 estimator = sil.Estimator(pr_dist_sil=pr_dist, pr_dist_nonsil=pr_dist)
@@ -90,13 +92,13 @@ a dictionary as above.
 One can perform MLE on either a set of previous FRA estimates, or on pairs
 of raw failure rates at -70mV and +40mV. Both types are demonstrated below.
 
-_For data in FRA estimate form:_
+- *For data in FRA estimate form:*
 ```python
 data = [0.18, 0.27, 0.11, -0.10, -0.02, 0.08]
 likelihood = estimator.estimate(data, dtype='est')
 ```
 
-_For data in raw failure rate form:_
+- *For data in raw failure rate form:*
 ```python
 data = [[0.2, 0.18], [0.4, 0.36], [0.38, 0.48], [0.58, 0.6], [0.46, 0.31]]
 likelihood = estimator.estimate(data, dtype='failrate')
@@ -129,16 +131,13 @@ separate populations with distinct true fractions of silent synapses.
 using log-likelihood ratio testing (hypothesis-based testing) using the
 maximum-likelihood estimates.
 
-### Plotting functions
+### Plotting function
+Each of these functions will redo all analysis/simulations and will return a
+near-fully formatted figure.
 
-```python
-# Each of these functions will redo all analysis/simulations and will return a fully formatted figure.
-
-sil.figures.plot_fig1()
-sil.figures.plot_fig1_S1()
-sil.figures.plot_fig1_S2()
-sil.figures.plot_fig2()
-sil.figures.plot_fig4()
-sil.figures.plot_fig4_suppLLR()
-
-```
+- `sil.figures.plot_fig1()`
+- `sil.figures.plot_fig1_S1()`
+- `sil.figures.plot_fig1_S2()`
+- `sil.figures.plot_fig2()`
+- `sil.figures.plot_fig4()`
+- `sil.figures.plot_fig4_suppLLR()`

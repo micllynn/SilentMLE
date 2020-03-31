@@ -4,16 +4,13 @@ mle.py: Contains main class for running maximum likelihood analysis.
 Author: mbfl
 Date: 19.9
 """
-
-
 import numpy as np
+import scipy.signal as sp_signal
 import matplotlib.pyplot as plt
 
 from .core import *
 
-# -------------------------------------------------------------------------------
-# MAIN FUNCTIONS FOR MLE
-# -------------------------------------------------------------------------------
+__all__ = ['Estimator']
 
 
 class Estimator(object):
@@ -60,10 +57,10 @@ class Estimator(object):
             If unitary_reduction is false, then frac_reduction describes
             the fraction of the total n to reduce the recorded population
             by during each step.
-        pr_dist_sil : PrDist class instance
+        pr_dist_sil : PrDist class instance (see .core for info on PrDist)
             Describes the distribution with which to draw silent synapse
             release probabilities from.
-        pr_dist_nonsil : PrDist class instance
+        pr_dist_nonsil : PrDist class instance (see .core for info on PrDist)
             Describes the distribution with which to draw nonsilent synapse
             release probabilities from.
         num_trials : int (default is 50)
@@ -109,16 +106,20 @@ class Estimator(object):
         A vector storing all values of the hypothesis (fraction silent)
         for the likelihood function
 
-    likelihood : np.ndarray, shape = (m)
-        A vector storing a likelhood associated with each hypothesis found in
-        self.hyp.
+    fra_dists : np.ndarray, shape = (m)
+        An array of arrays storing the FRA estimate distributions for
+        each hypothesis found in self.hyp.
+
+    likelihood : np.ndarray, shape = (n, m)
+        A vector storing a likelihood for each pair of observations
+        (dim1) and hypothesis (dim2)
 
     params : dict
         A dictionary of experimental and simulation parameters which were used
         to generate self.likelihood.
     """
 
-    def __init__(self, n_simulations=5000, n_likelihood_points=500,
+    def __init__(self, n_simulations=10000, n_likelihood_points=200,
                  obs_bins=0.02, zeroing=False, **kwargs):
 
         print('\nNew Estimator\n----------------------')
@@ -147,8 +148,9 @@ class Estimator(object):
                                          silent_fraction=silent,
                                          zeroing=zeroing, **kwargs)
 
+        print('\r' + 'Generating estimate distributions... 100%')
+
         # 2. Create loglikelihood function for each case
-        print('')
         # Bin observations from -200 to 100
         obs = np.arange(-2, 1+2*obs_bins, obs_bins)
         likelihood = np.empty([len(obs), len(hyp)])
@@ -164,8 +166,12 @@ class Estimator(object):
                     np.abs(fra_calc[ind_hyp] - obs_) < obs_bins/2)[0]
                 p_obs = len(obs_in_range) / len(fra_calc[ind_hyp])
                 likelihood[ind_obs, ind_hyp] = p_obs
+        print('\r' + 'Generating likelihood functions... 100%')
+
         likelihood += 0.0001  # Set likelihoods microscopically away from 0
         # (to avoid log(0) errors)
+
+        self.fra_dists = fra_calc
 
         self.obs = obs
         self.hyp = hyp
@@ -173,8 +179,47 @@ class Estimator(object):
 
         print('\n** Estimator initialized **')
 
+    def _smooth_likelihood(self, joint_likelihood,
+                           window_length_silfrac=0.05,
+                           polyorder=3):
+        """Method filters a joint likelihood with a savgol filter using
+        intelligently picked params, and returns the result.
+
+        Parameters
+        -----------
+        joint_likelihood : np.array
+            Array expressing the joint likelihood (ie considered across all
+            observations.)
+
+        window_length_silfrac : float
+            Desired window length for filter, expressed as silent fraction.
+            (Converted internally to indices).
+
+        polyorder : int
+            Order of polynomial used for smoothing.
+
+        Returns
+        ----------
+        likelihood_sm : np.array
+            Likelihood function smoothed with Savitzky-Golay filter.
+        """
+        hyp_interval = self.hyp[1] - self.hyp[0]
+        window_length_ind = int(round(window_length_silfrac/hyp_interval))
+
+        if np.divmod(window_length_ind, 2)[1] == 0:
+            window_length_ind += 1
+
+        likelihood_sm = sp_signal.savgol_filter(
+            joint_likelihood,
+            window_length=window_length_ind,
+            polyorder=polyorder)
+
+        return likelihood_sm
+
     def estimate(self, data, plot_joint_likelihood=True,
-                 dtype='est'):
+                 dtype='est', use_smoothed=True,
+                 smooth_window=0.1, smooth_polyorder=3,
+                 return_normed=True):
         """
         Method performs maximum likelihood analysis on a set of data.
 
@@ -187,19 +232,39 @@ class Estimator(object):
         data : array-like
             A 1-d array of data.
             * If dtype = 'est: data must comprise of individual estimates of
-            fraction synapses silent, calculated using the failure-rate analysis
-            equation and expressed as fractions, not percents
+            fraction synapses silent, calculated using the failure-rate
+            analysis equation and expressed as fractions, not percents
                 e.g. data = [0.27, -0.14, 0.63, -0.01]
             * If dtype = 'failrate': data must comprise of pairs of failure
             rate observations in the format (Fh, Fd), expressed as fractions.
                 e.g. data = [[0.35, 0.21], [0.56, 0.58], [0.49, 0.27]].
+
         plot_joint_likehood  : boolean
             Whether to construct a plot of the joint likelihood function.
+
         dtype : string | 'est' or 'failrate'
             If 'est', then data must be comprised of estimates of silent
             fraction passed through the failure-rate equation.
             If 'failrate', then raw failure rates are given in data.
 
+        use_smoothed : boolean
+            Whether to use the smoothed likelihood function (True) or
+            the raw likelihood (False).
+                * Typically, the smoothed function allows for more
+                reliable estimates since it averages out noise
+                during the simulations.
+
+        smooth_window : float
+            If use_smoothed is True, this specifies the
+            desired window length for filter, expressed as silent fraction.
+            (Converted internally to indices).
+
+        smooth_polyorder : int
+            If use_smoothed is True, this specifies the
+            order of polynomial used for smoothing.
+
+        return_normed : boolean
+            Whether to return a normalized likelihood or not.
 
         Returns
         --------------
@@ -225,10 +290,17 @@ class Estimator(object):
             ind_datum_ = np.argmin(np.abs(datum - self.obs))
             likelihood_data[ind] = self.likelihood[ind_datum_, :]
             joint_logl_data += np.log(likelihood_data[ind])
+
         joint_likelihood = np.exp(joint_logl_data)
         joint_likelihood_norm = joint_likelihood / np.max(joint_likelihood)
 
-        ind_mle_data = np.argmax(joint_logl_data)
+        if use_smoothed is True:
+            joint_likelihood_norm = self._smooth_likelihood(
+                joint_likelihood_norm,
+                window_length_silfrac=smooth_window,
+                polyorder=smooth_polyorder)
+
+        ind_mle_data = np.argmax(joint_likelihood_norm)
         mle_data = self.hyp[ind_mle_data]
 
         if plot_joint_likelihood is True:
@@ -241,13 +313,18 @@ class Estimator(object):
             ax.plot(mle_x_, mle_y_, '--', color=[0.9, 0.05, 0.15])
             ax.set_xlabel('silent frac.')
             ax.set_ylabel('likelihood (norm.)')
-            ax.set_ylim([0, 1.2])
+            # ax.set_ylim([0, 1.2])
             ax.set_xlim([0, 1])
             ax.text(self.hyp[ind_mle_data], 1.1,
                     f'MLE = {mle_data:.2f}', horizontalalignment='left',
                     verticalalignment='bottom', color=[0.9, 0.05, 0.15],
                     fontweight='bold')
+            fig.savefig('joint_likelihood.pdf')
+            plt.show()
 
         print(f'MLE = {mle_data*100:.0f}% silent')
 
-        return joint_likelihood
+        if return_normed is True:
+            return joint_likelihood_norm
+        elif return_normed is False:
+            return joint_likelihood
