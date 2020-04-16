@@ -7,8 +7,6 @@
 !/silentmle/*.py
 
 !/silentmle/data
-/silentmle/data/*
-!/silentmle/data/*.hdf5
 
 !.gitignore
 !README.md
