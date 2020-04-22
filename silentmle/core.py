@@ -835,7 +835,8 @@ def power_analysis_llr(fra_dist_1, likelihoods,
                        init_guess=2048,
                        sample_draws=2000,
                        alpha=0.05, beta=0.2,
-                       verbosity=True):
+                       verbosity=True,
+                       plot_ex=False):
     """
     Performs a power analysis using loglikelihood ratio testing (Wilks' theorem)
     on a distribution of estimated silent synapse fractions generated from a
@@ -952,7 +953,7 @@ def power_analysis_llr(fra_dist_1, likelihoods,
 
         # Pick indices for each sample set
         fra_subsample = np.random.choice(fra_dist_1,
-                                       size=(sample_draws, current_guess))
+                                         size=(sample_draws, current_guess))
         pvals_ = np.empty([sample_draws])
 
         # For each draw, compute the max-likelihood estimate
@@ -960,11 +961,13 @@ def power_analysis_llr(fra_dist_1, likelihoods,
             # Calculate likelihood-array-indices of samples by adding 200 to
             # align to -200:1:100 observations
             # Compute loglikelihood function given all observations
-            loglikelihood_sum = np.sum(np.log(likelihoods[
-                (fra_subsample[ind_, :]*100+200).astype(np.int), :]), axis=0)
+            ind_likelihood = (fra_subsample[ind_, :]*100+200).astype(np.int)
+            loglikelihood_sum = np.sum(np.log(
+                likelihoods[ind_likelihood, :]), axis=0)
+
             # Calculate argmax of likelihood
             ind_max_likelihood = np.argmax(loglikelihood_sum)
-            if ind_ == 0:
+            if ind_ == 0 and plot_ex == True:
                 plt.figure()
                 plt.plot(loglikelihood_sum)
                 plt.show()

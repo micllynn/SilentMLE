@@ -153,7 +153,7 @@ class Estimator(object):
         # 2. Create loglikelihood function for each case
         # Bin observations from -200 to 100
         obs = np.arange(-2, 1+2*obs_bins, obs_bins)
-        likelihood = np.empty([len(obs), len(hyp)])
+        likelihood = np.empty([len(obs), len(hyp)], dtype=np.float64)
         for ind_obs, obs_ in enumerate(obs):
             progress = ind_obs/len(obs)*100
             print('\r' + f'Generating likelihood functions... {progress:.1f}'
@@ -219,7 +219,7 @@ class Estimator(object):
     def estimate(self, data, plot_joint_likelihood=True,
                  dtype='est', use_smoothed=True,
                  smooth_window=0.1, smooth_polyorder=3,
-                 return_normed=True):
+                 return_normed=True, verbose=True):
         """
         Method performs maximum likelihood analysis on a set of data.
 
@@ -266,13 +266,17 @@ class Estimator(object):
         return_normed : boolean
             Whether to return a normalized likelihood or not.
 
+        verbose : boolean
+            Whether to print progress statements to the terminal.
+
         Returns
         --------------
         joint_likelihood : np.ndarray
             The joint likelihood function across all data. Values are indexed
             to self.hyp (hypothesis space, or silent synapse fractions).
         """
-        print('\nRunning MLE on data\n----------------------')
+        if verbose is True:
+            print('\nRunning MLE on data\n----------------------')
 
         if dtype == 'failrate':
             # Convert failrates to silent fraction estimates and store back
@@ -284,7 +288,7 @@ class Estimator(object):
             data = data_calc
 
         likelihood_data = np.empty((len(data), len(self.hyp)))
-        joint_logl_data = np.zeros((len(self.hyp)))
+        joint_logl_data = np.zeros((len(self.hyp)), dtype=np.float64)
 
         for ind, datum in enumerate(data):
             ind_datum_ = np.argmin(np.abs(datum - self.obs))
@@ -294,26 +298,38 @@ class Estimator(object):
         joint_likelihood = np.exp(joint_logl_data)
         joint_likelihood_norm = joint_likelihood / np.max(joint_likelihood)
 
-        if use_smoothed is True:
+        # Large-dataset condition to prevent np.exp({very negative number}):
+        _use_logl = np.min(joint_logl_data) < -500
+
+        if use_smoothed == True and _use_logl == False:
+            if verbose is True:
+                print('Smoothing...')
             joint_likelihood_norm = self._smooth_likelihood(
                 joint_likelihood_norm,
                 window_length_silfrac=smooth_window,
                 polyorder=smooth_polyorder)
 
-        ind_mle_data = np.argmax(joint_likelihood_norm)
+        if _use_logl:
+            ind_mle_data = np.argmax(joint_logl_data)
+        else:
+            ind_mle_data = np.argmax(joint_likelihood_norm)
         mle_data = self.hyp[ind_mle_data]
 
         if plot_joint_likelihood is True:
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
-            ax.plot(self.hyp, joint_likelihood_norm)
+
+            if _use_logl:
+                ax.plot(self.hyp, joint_logl_data)
+                ax.set_ylabel('log-likelihood')
+            else:
+                ax.plot(self.hyp, joint_likelihood_norm)
+                ax.set_ylabel('likelihood (norm.)')
 
             mle_x_ = [self.hyp[ind_mle_data], self.hyp[ind_mle_data]]
             mle_y_ = [ax.get_ylim()[0], ax.get_ylim()[1]]
             ax.plot(mle_x_, mle_y_, '--', color=[0.9, 0.05, 0.15])
             ax.set_xlabel('silent frac.')
-            ax.set_ylabel('likelihood (norm.)')
-            # ax.set_ylim([0, 1.2])
             ax.set_xlim([0, 1])
             ax.text(self.hyp[ind_mle_data], 1.1,
                     f'MLE = {mle_data:.2f}', horizontalalignment='left',
@@ -322,9 +338,13 @@ class Estimator(object):
             fig.savefig('joint_likelihood.pdf')
             plt.show()
 
-        print(f'MLE = {mle_data*100:.0f}% silent')
+        if verbose is True:
+            print(f'MLE = {mle_data*100:.1f}% silent')
 
-        if return_normed is True:
-            return joint_likelihood_norm
-        elif return_normed is False:
-            return joint_likelihood
+        if _use_logl:
+            return joint_logl_data
+        else:
+            if return_normed is True:
+                return joint_likelihood_norm
+            elif return_normed is False:
+                return joint_likelihood
