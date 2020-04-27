@@ -30,13 +30,11 @@ except ModuleNotFoundError:
 cm_ = sns.diverging_palette(240, 15, l=45, s=90, center="dark", as_cmap=True)
 
 
-# * figure functions:
-# ** fig1:
 def plot_fig1(figname='Figure1.pdf',
               fontsize=8,
               cmap=cm_,
-              cmap_hyp=0.9,
-              cmap_dep=0.1):
+              cmap_hyp=0.1,
+              cmap_dep=0.9):
 
     try:
         plt.style.use('publication_ml')
@@ -259,15 +257,11 @@ def plot_fig1(figname='Figure1.pdf',
     return
 
 
-# ** fig1_s1:
 def plot_figS1(figname='FigureS1.pdf',
                fontsize=8,
-               cmap_pr=sns.diverging_palette(
-                   255, 15, l=45, s=90, n=6,
-                   center="dark", as_cmap=True),
                cmap_n=sns.cubehelix_palette(
-                   start=-0, rot=-0.5, light=0.9,
-                   dark=0.1, as_cmap=True),
+                   start=0.4, rot=-0.6, light=0.8,
+                   dark=0.2, as_cmap=True),
                bins_=np.arange(-150, 50, 10)):
 
     try:
@@ -277,11 +271,13 @@ def plot_figS1(figname='FigureS1.pdf',
 
     mpl.rcParams['font.size'] = fontsize
     mpl.rcParams['axes.labelsize'] = fontsize+1
-    mpl.rcParams['axes.labelweight'] = 'bold'
+    mpl.rcParams['axes.linewidth'] = 1
+    mpl.rcParams['lines.linewidth'] = 1
+    mpl.rcParams['xtick.major.width'] = 1
+    mpl.rcParams['ytick.major.width'] = 1
 
     bins_ = np.arange(-150, 50, 10)
-    fig = plt.figure(figsize=(6.5, 10),
-                     constrained_layout=False)
+    fig = plt.figure(figsize=(6.85, 8))
     # Define spec for entire fig
     spec_all = gridspec.GridSpec(nrows=4, ncols=3,
                                  figure=fig)
@@ -290,11 +286,13 @@ def plot_figS1(figname='FigureS1.pdf',
     # Example failrate plots
     ##############################
     spec_failex = gridspec.GridSpecFromSubplotSpec(
-        3, 1, spec_all[0, 1], hspace=0.2)
+        3, 1, spec_all[0, 1], hspace=0.02)
     failex = []
 
     pr = [0.05, 0.5, 0.95]
-    color_pr = [cmap_pr(0.1)[0:3], [0.3, 0.3, 0.3], cmap_pr(0.9)[0:3]]
+    color_pr = [[0.459, 0.631, 0.851],
+                [0.3, 0.3, 0.3],
+                [0.902, 0.490, 0.322]]
     alpha_ = 1
     alphalow_ = 0.9
 
@@ -336,12 +334,12 @@ def plot_figS1(figname='FigureS1.pdf',
             failex[ind].spines['bottom'].set_visible(True)
             failex[ind].xaxis.set_ticks_position('bottom')
             failex[ind].set_xticks([0, 25, 50])
-            sns.despine(ax=failex[ind], offset={'left': 3})
+            sns.despine(ax=failex[ind], offset={'left': 5})
         else:
             failex[ind].axes.get_xaxis().set_visible(False)
             failex[ind].spines['bottom'].set_visible(False)
             sns.despine(ax=failex[ind], bottom=True,
-                        offset={'left': 3})   
+                        offset={'left': 5})
 
         if ind is 1:
             failex[ind].set_ylabel('Sim. EPSC (pA)')
@@ -397,18 +395,18 @@ def plot_figS1(figname='FigureS1.pdf',
         fails_sd[ind] = np.std(fails_)
         calc_sd[ind] = np.std(calc_)
 
-    fd_inset.plot(pr_fine, fails_sd, linewidth=1.5, color=[0, 0, 0, 0.5])
-    fd_inset.set_xlabel('Pr')
+    fd_inset.plot(pr_fine, fails_sd, color=[0, 0, 0, 0.5])
+    fd_inset.set_xlabel('failure rate')
     fd_inset.set_ylabel('std dev')
     fd_inset.set_ylim([0, 0.08])
     fd_inset.set_xlim([0, 1])
-    sns.despine(ax=fail_dist, offset={'left': 3})
+    sns.despine(ax=fail_dist, offset={'left': 5})
 
     ########################
     # Silent synapse examples
     ########################
     spec_calcex = gridspec.GridSpecFromSubplotSpec(
-        3, 1, spec_all[1, 0], hspace=0.2)
+        3, 1, spec_all[1, 0], hspace=0.02)
     calcex = []
 
     for ind, pr_ in enumerate(pr):
@@ -494,13 +492,13 @@ def plot_figS1(figname='FigureS1.pdf',
             calcex[ind].set_xlabel('Sweeps')
             calcex[ind].spines['bottom'].set_visible(True)
             calcex[ind].xaxis.set_ticks_position('bottom')
-            calcex[ind].set_xticks([0, 25, 50])
-            sns.despine(ax=calcex[ind], offset={'left': 3})
+            calcex[ind].set_xticks([0, 25, 50, 75, 100])
+            sns.despine(ax=calcex[ind], offset={'left': 5})
         else:
             calcex[ind].axes.get_xaxis().set_visible(False)
             calcex[ind].spines['bottom'].set_visible(False)
             sns.despine(ax=calcex[ind], bottom=True,
-                        offset={'left': 3})
+                        offset={'left': 5})
 
         if ind is 1:
             calcex[ind].set_ylabel('Sim. EPSC (pA)')
@@ -554,7 +552,7 @@ def plot_figS1(figname='FigureS1.pdf',
     est_dist.set_yticks(np.linspace(0, 0.4, 5))
 
     # Calculate the failrate sd
-    ed_inset.plot(pr_fine, calc_sd, linewidth=1.5, color=[0, 0, 0, 0.5])
+    ed_inset.plot(pr_fine, calc_sd, color=[0, 0, 0, 0.5])
     ed_inset.set_xlabel('Pr')
     ed_inset.set_ylabel('std dev')
     ed_inset.set_ylim([0, 150])
@@ -564,12 +562,12 @@ def plot_figS1(figname='FigureS1.pdf',
     est_cumul.set_xlabel('est. silent (%)')
     est_cumul.set_xlim([-500, 100])
     est_cumul.set_xticks([-500, -300, -100, 100])
-    est_cumul.set_ylabel('cumul. pdf')
+    est_cumul.set_ylabel('cdf')
     est_cumul.set_ylim([0, 1])
     est_cumul.set_yticks(np.linspace(0, 1, 5))
 
-    sns.despine(ax=est_dist, offset={'left': 3})
-    sns.despine(ax=est_cumul, offset={'left': 3})
+    sns.despine(ax=est_dist, offset={'left': 5})
+    sns.despine(ax=est_cumul, offset={'left': 5})
 
     ########################
     # multi-synapse failure rate
@@ -624,7 +622,7 @@ def plot_figS1(figname='FigureS1.pdf',
     est_dist_multi.set_ylabel('stdev(est. silent) (%)')
     est_dist_multi.set_ylim([0, 150])
     est_dist_multi.set_yticks(np.arange(0, 151, 25))
-    sns.despine(ax=est_dist_multi, offset={'left': 3})
+    sns.despine(ax=est_dist_multi, offset={'left': 5})
 
     est_dist_multi_failx.legend(labels=n_syn, title='Num. synapses')
     est_dist_multi_failx.set_xlabel('failure rate')
@@ -632,13 +630,14 @@ def plot_figS1(figname='FigureS1.pdf',
     est_dist_multi_failx.set_ylabel('stdev(est. silent) (%)')
     est_dist_multi_failx.set_ylim([0, 150])
     est_dist_multi_failx.set_yticks(np.arange(0, 151, 25))
-    sns.despine(ax=est_dist_multi_failx, offset={'left': 3})
+    sns.despine(ax=est_dist_multi_failx, offset={'left': 5})
 
     ###########################
     # Delta failure rate plots
     ##############################
-    spec_failex = gridspec.GridSpecFromSubplotSpec(
-        3, 1, spec_all[3, 0], hspace=0.2)
+    # spec_failex = gridspec.GridSpecFromSubplotSpec(
+    #     3, 1, spec_all[3, 0], hspace=0.02)
+    spec_failex = spec_all[3, 0].subgridspec(3, 1)
     failex = []
 
     fails_hyp = [0.45, 0.05, 0.85]
@@ -651,10 +650,11 @@ def plot_figS1(figname='FigureS1.pdf',
         failex.append(fig.add_subplot(spec_failex[ind, 0]))
 
         # First, calculate the color to use
-        ratio_ = ind / (len(fails_hyp) - 1)
-        blue_ = 1 / (1 + np.exp(-5 * (ratio_ - 0.5)))
-        color_ = [0, 0.25 + blue_ / 3, 0.7 - (blue_ / 2)]
-        color_fails[ind] = color_
+        # ratio_ = ind / (len(fails_hyp) - 1)
+        # blue_ = 1 / (1 + np.exp(-5 * (ratio_ - 0.5)))
+        # color_ = [0, 0.25 + blue_ / 3, 0.7 - (blue_ / 2)]
+        # color_fails[ind] = color_
+        color_fails[ind] = cmap_n((ind+1)/len(fails_hyp))
 
         # Simulate failures over one experiment
         fails_hyp_bool = np.zeros(50, dtype=np.bool)
@@ -741,13 +741,13 @@ def plot_figS1(figname='FigureS1.pdf',
             failex[ind].set_xlabel('Sweeps')
             failex[ind].spines['bottom'].set_visible(True)
             failex[ind].xaxis.set_ticks_position('bottom')
-            failex[ind].set_xticks([0, 25, 50])
-            sns.despine(ax=failex[ind], offset={'left': 3})
+            failex[ind].set_xticks([0, 25, 50, 75, 100])
+            sns.despine(ax=failex[ind], offset={'left': 5})
         else:
             failex[ind].spines['bottom'].set_visible(False)
             failex[ind].axes.get_xaxis().set_visible(False)
             sns.despine(ax=failex[ind], bottom=True,
-                        offset={'left': 3})
+                        offset={'left': 5})
 
         if ind is 1:
             failex[ind].set_ylabel('Sim. EPSC (pA)')
@@ -758,10 +758,11 @@ def plot_figS1(figname='FigureS1.pdf',
 
     fails_fine = np.linspace(0, 1, num=1000)
     log_fails_fine = np.log(fails_fine)
-    spl_log.plot(fails_fine, log_fails_fine, color='k', linewidth=2)
+    spl_log.plot(fails_fine, log_fails_fine, color='k')
     spl_log.set_xlabel('failure rate')
     spl_log.set_ylabel('log(failure rate)')
     spl_log.set_ylim([-4, 1])
+    spl_log.set_xlim([0, 1])
 
     for ind, fails_hyp_ in enumerate(fails_hyp):
         spl_log.annotate("",
@@ -773,7 +774,7 @@ def plot_figS1(figname='FigureS1.pdf',
                                          connectionstyle="arc3",
                                          color=color_fails[ind],
                                          alpha=0.9,
-                                         linewidth=1.5,
+                                         linewidth=1,
                                          shrinkA=1,
                                          shrinkB=0.5))
 
@@ -786,7 +787,7 @@ def plot_figS1(figname='FigureS1.pdf',
                                          connectionstyle="arc3",
                                          color=color_fails[ind],
                                          alpha=0.9,
-                                         linewidth=1.5,
+                                         linewidth=1,
                                          shrinkA=1,
                                          shrinkB=0.5))
 
@@ -844,9 +845,9 @@ def plot_figS1(figname='FigureS1.pdf',
                      horizontalalignment='center',
                      verticalalignment='center')
 
-        sns.despine(ax=spl_log, offset={'left': 3})
+        sns.despine(ax=spl_log, offset={'left': 5})
 
-    spec_all.tight_layout(fig)
+    # spec_all.tight_layout(fig)
 
     path = os.path.join(os.getcwd(), 'figs')
     if not os.path.exists(path):
@@ -858,26 +859,26 @@ def plot_figS1(figname='FigureS1.pdf',
 
     return
 
-# ** fig2:
+# fig2:
 # For gamma:
 # gamma_shape = 3
 # gamma_rate = 5.8
 # gamma_scale = 1 / gamma_rate
 
 
-def plot_fig2(silent_fraction_low=0.1,
-              silent_fraction_high=0.9,
-              plot_sims=40,
-              fontsize=9,
-              ylab_pad_tight=-3,
-              figname='Fig2.pdf',
-              trueval_lim=0.1,
+def plot_fig2(trueval_lim=0.1,
               frac_reduction=0.1,
               method_='iterative',
               pr_dist_sil=PrDist(sp_stats.uniform),
               pr_dist_nonsil=PrDist(sp_stats.uniform),
               cmap=cm_,
-              despine_offset={'left': 3}):
+              fontsize=8,
+              plot_sims=40,
+              despine_offset={'left': 3},
+              ylab_pad_tight=-3,
+              xlim_n_active=8,
+              xlim_n_silent=40,
+              figname='Fig2.pdf'):
     '''
     Fig 2:
         a. Schematic of simulations
@@ -1045,7 +1046,7 @@ def plot_fig2(silent_fraction_low=0.1,
     except FileNotFoundError:
         pass
     fig = plt.figure(constrained_layout=True)
-    fig.set_figheight(5.5)
+    fig.set_figheight(5)
     fig.set_figwidth(3.43)
 
     # Define spec for entire fig
@@ -1077,20 +1078,16 @@ def plot_fig2(silent_fraction_low=0.1,
 
         n_plot_nonsil.plot(np.arange(1, len(count_nonsil[ind_silent])),
                            count_nonsil[ind_silent][1:],
-                           color=color_nonsilent * silent,
-                           alpha=0.9,
-                           linewidth=1)
+                           color=color_nonsilent * silent)
         n_plot_sil.plot(np.arange(0, len(count_sil[ind_silent])),
                         count_sil[ind_silent],
-                        color=color_silent * silent,
-                        alpha=0.9,
-                        linewidth=1)
+                        color=color_silent * silent)
 
     n_plot_nonsil.set_xlabel('active synapses')
-    n_plot_nonsil.set_ylabel('probability density')
-    n_plot_nonsil.set_xticks(np.arange(0, 9, 2))
-    n_plot_nonsil.set_xlim([0, 8])
-    n_plot_nonsil.set_ylim([0, 0.8])
+    n_plot_nonsil.set_ylabel('pdf')
+    n_plot_nonsil.set_xticks(np.arange(0, xlim_n_active+1, 2))
+    n_plot_nonsil.set_xlim([0, xlim_n_active])
+    n_plot_nonsil.set_ylim([0, n_plot_nonsil.get_ylim()[1]])
     sns.despine(ax=n_plot_nonsil, offset=despine_offset)
 
     leg_ns = n_plot_nonsil.legend(labels=(silent_truefrac_coarse * 100)
@@ -1102,9 +1099,9 @@ def plot_fig2(silent_fraction_low=0.1,
                                   fontsize='x-small')
 
     n_plot_sil.set_xlabel('silent synapses')
-    n_plot_sil.set_xticks(np.arange(0, 50, 10))
-    n_plot_sil.set_xlim([0, 50])
-    n_plot_sil.set_ylim([0, 0.8])
+    n_plot_sil.set_xticks(np.arange(0, xlim_n_silent+1, 10))
+    n_plot_sil.set_xlim([0, xlim_n_silent])
+    n_plot_sil.set_ylim([0, n_plot_sil.get_ylim()[1]])
     sns.despine(ax=n_plot_sil, offset=despine_offset)
 
     leg_s = n_plot_sil.legend(
@@ -1146,7 +1143,7 @@ def plot_fig2(silent_fraction_low=0.1,
                 markersize=1)
             release_prob_nonsil.plot(
                 syn_number, pr_nonsil_mean[syn_number], '.',
-                color=color_pr, alpha=0.9, markersize=5)
+                color=color_pr, markersize=5)
 
     # Plot the subset composition vs superset composition for each position
     subset_fracsil = np.empty(len(silent_truefrac_coarse), dtype=np.ndarray)
@@ -1163,8 +1160,7 @@ def plot_fig2(silent_fraction_low=0.1,
     subset_error.plot(silent_truefrac_coarse,
                       subset_fracsil_mean,
                       color=color_silent,
-                      alpha=0.9,
-                      linewidth=1)
+                      alpha=0.9)
     subset_error.fill_between(silent_truefrac_coarse,
                               subset_fracsil_mean - subset_fracsil_sd,
                               subset_fracsil_mean + subset_fracsil_sd,
@@ -1177,9 +1173,9 @@ def plot_fig2(silent_fraction_low=0.1,
                       linewidth=0.5)
 
     # Adjust plot features
-    release_prob_nonsil.set_xlim([0, 8.3])
+    release_prob_nonsil.set_xlim([0, xlim_n_active+0.5])
     release_prob_nonsil.set_ylim([0, 1])
-    release_prob_nonsil.set_xticks(np.arange(0, 9, 2))
+    release_prob_nonsil.set_xticks(np.arange(0, xlim_n_active+1, 2))
     release_prob_nonsil.set_yticks([0, 0.5, 1])
     release_prob_nonsil.set_xlabel('active synapses')
     release_prob_nonsil.set_ylabel('mean Pr')
@@ -1222,7 +1218,7 @@ def plot_fig2(silent_fraction_low=0.1,
     sim_ex_30.set_xticklabels([0, 5, 10, 15])
     sim_ex_30.text(1,
                    0.55,
-                   'nonsilent',
+                   'active',
                    verticalalignment='top',
                    horizontalalignment='right',
                    color=[0, 0, 0],
@@ -1292,25 +1288,21 @@ def plot_fig2(silent_fraction_low=0.1,
                          currents_hyp_sum[suc_ind_hyp],
                          '.',
                          color=cmap(0),
-                         alpha=0.9,
                          markeredgewidth=0)
         failex[ind].plot(fail_ind_hyp,
                          currents_hyp_sum[fail_ind_hyp],
                          '.',
                          color=cmap(0.5),
-                         alpha=0.9,
                          markeredgewidth=0)
         failex[ind].plot(suc_ind_dep + 50,
                          currents_dep_sum[suc_ind_dep],
                          '.',
                          color=cmap(0.99),
-                         alpha=0.9,
                          markeredgewidth=0)
         failex[ind].plot(fail_ind_dep + 50,
                          currents_dep_sum[fail_ind_dep],
                          '.',
                          color=cmap(0.5),
-                         alpha=0.9,
                          markeredgewidth=0)
         failex[ind].plot([0, 100], [0, 0], ':k', linewidth=1)
 
@@ -1330,7 +1322,6 @@ def plot_fig2(silent_fraction_low=0.1,
         failex[ind].text(0.05,
                          0.95,
                          text_truesil,
-                         fontsize=fontsize + 1,
                          fontweight='bold',
                          color=color_nonsilent * 0.4,
                          alpha=0.9,
@@ -1345,7 +1336,6 @@ def plot_fig2(silent_fraction_low=0.1,
         failex[ind].text(1,
                          0.1,
                          text_estsil,
-                         fontsize=fontsize - 1,
                          fontweight='bold',
                          color=[0, 0, 0],
                          alpha=1,
@@ -1364,26 +1354,26 @@ def plot_fig2(silent_fraction_low=0.1,
     desired_silent = 0.3
     ind_desired_silent = np.argmin(
         np.abs(silent_truefrac_fine - desired_silent))
+    bins_ = np.linspace(0, 100, 40)
 
     ax_frahist_z = fig.add_subplot(spec_all[2:4, 3:6])
 
     # Histogram
     ax_frahist_z.hist(fra_calc_z[0] * 100,
-                      bins=20,
-                      weights=np.ones_like(fra_calc_z[0]) / len(fra_calc_z[0]),
+                      bins=bins_,
+                      density=True,
                       color=[0, 0, 0, 1],
-                      histtype=histtype_,
-                      linewidth=1)
-    ax_frahist_z.hist(fra_calc_z[ind_desired_silent] * 100, bins=20,
-                      weights=np.ones_like(fra_calc_z[ind_desired_silent])
-                      / len(fra_calc_z[ind_desired_silent]),
+                      histtype=histtype_)
+    ax_frahist_z.hist(fra_calc_z[ind_desired_silent] * 100,
+                      bins=bins_,
+                      density=True,
                       color=cmap(0.99),
-                      histtype=histtype_,
-                      linewidth=1)
+                      histtype=histtype_)
     ax_frahist_z.legend(labels=['0', str(desired_silent * 100)],
                         title='silent (%)')
 
     ax_frahist_z.set_xlim([0, 100])
+    ax_frahist_z.set_xticks([0, 25, 50, 75, 100])
     ax_frahist_z.set_xlabel('estimated silent (%)')
     ax_frahist_z.set_ylabel('pdf')
     sns.despine(ax=ax_frahist_z, offset=despine_offset)
@@ -1400,14 +1390,12 @@ def plot_fig2(silent_fraction_low=0.1,
         bias_no_z[ind] = (np.mean(fra_calc[ind]) - silent_truefrac_fine[ind])
     ax_bias.plot(silent_truefrac_fine * 100,
                  bias * 100,
-                 color=[0, 0, 0],
-                 linewidth=1)
+                 color=[0, 0, 0])
     ax_bias.plot(silent_truefrac_fine * 100,
                  bias_no_z * 100,
-                 color=[0.5, 0.5, 0.5],
-                 linewidth=1)
+                 color=[0.5, 0.5, 0.5])
     ax_bias.legend(labels=['FRA (zeroed)', 'FRA (raw)'], title='estimator')
-    ax_bias.set_xlabel('ground truth silent (%)')
+    ax_bias.set_xlabel('true silent (%)')
     ax_bias.set_ylabel('estimator bias (%)')
     ax_bias.set_xticks([0, 10, 20, 30, 40, 50])
     ax_bias.set_xlim([0, 50])
@@ -1423,14 +1411,12 @@ def plot_fig2(silent_fraction_low=0.1,
         stdev_no_z[ind] = np.std(fra_calc[ind] * 100)
     ax_var.plot(silent_truefrac_fine * 100,
                 stdev,
-                color=[0, 0, 0],
-                linewidth=1)
+                color=[0, 0, 0])
     ax_var.plot(silent_truefrac_fine * 100,
                 stdev_no_z,
-                color=[0.5, 0.5, 0.5],
-                linewidth=1)
+                color=[0.5, 0.5, 0.5])
     ax_var.legend(labels=['FRA (zeroed)', 'FRA (raw)'], title='estimator')
-    ax_var.set_xlabel('ground truth silent (%)')
+    ax_var.set_xlabel('true silent (%)')
     ax_var.set_ylabel('estimator std (%)')
     ax_var.set_ylim([0, ax_var.get_ylim()[1]])
     ax_var.set_xticks([0, 10, 20, 30, 40, 50])
@@ -1446,6 +1432,40 @@ def plot_fig2(silent_fraction_low=0.1,
     path_f = os.path.join(path, figname)
 
     plt.savefig(path_f)
+
+    return
+
+
+def plot_figS2():
+    """Plots figure S2 (experimental simulator, with physiologically
+    realistic release probability distribution of gamma (shape: 3,
+    scale: 1/5.8)
+    """
+    pr_dist_gamma = PrDist(sp_stats.gamma,
+                           args={'a': 3,
+                                 'scale': 1/5.8})
+
+    plot_fig2(figname='FigS2.pdf',
+              pr_dist_sil=pr_dist_gamma,
+              pr_dist_nonsil=pr_dist_gamma)
+
+    return
+
+
+def plot_figS3():
+    """Plots figure S3 (experimental simulator, with extreme
+    release probability distribution of gamma (shape: 1,
+    scale: 1/5.8)
+    """
+    pr_dist_gamma = PrDist(sp_stats.gamma,
+                           args={'a': 1,
+                                 'scale': 1/5.8})
+
+    plot_fig2(figname='FigS3.pdf',
+              pr_dist_sil=pr_dist_gamma,
+              pr_dist_nonsil=pr_dist_gamma,
+              xlim_n_active=16,
+              xlim_n_silent=100)
 
     return
 
@@ -1684,32 +1704,34 @@ def plot_fig4(n_true_silents_power=26,
                                               center="dark", as_cmap=True)
     color_fra = color_fra_palette(0.1)
     color_binary = [0.2, 0.2, 0.2]
+    color_llr_framle = cm_(0)
+    color_llr_binary = cm_(0.95)
 
     # Top: FRA-MLE bias and variance
     # -----------------------------------------------
     ax_bias = fig.add_subplot(spec_all[0, 0])
     ax_bias.plot(est_hyp * 100, bias_framle * 100,
-                 color=[0, 0, 0])
+                 color=color_llr_framle, linewidth=lw_)
     ax_bias.plot(est_hyp * 100, bias * 100,
-                 color=[0.2, 0.6, 0.4])
+                 color=color_fra, linewidth=lw_)
     ax_bias.set_xlim([0, 50])
     ax_bias.set_xticks([0, 10, 20, 30, 40, 50])
-    ax_bias.set_xlabel('ground truth silent (%)')
+    ax_bias.set_xlabel('true silent (%)')
     ax_bias.set_ylabel('estimator bias (%)')
-    ax_bias.legend(['FRA-MLE', 'FRA'])
+    ax_bias.legend(['fra-mle', 'fra'])
     sns.despine(ax=ax_bias, offset=despine_offset)
 
     ax_var = fig.add_subplot(spec_all[0, 1])
     ax_var.plot(est_hyp * 100, stdev_framle * 100,
-                color=[0, 0, 0])
+                color=color_llr_framle, linewidth=lw_)
     ax_var.plot(est_hyp * 100, stdev * 100,
-                color=[0.2, 0.6, 0.4])
+                color=color_fra, linewidth=lw_)
     ax_var.set_xlim([0, 50])
     ax_var.set_xticks([0, 10, 20, 30, 40, 50])
     ax_var.set_ylim([0, 40])
-    ax_var.set_xlabel('ground truth silent (%)')
+    ax_var.set_xlabel('true silent (%)')
     ax_var.set_ylabel('estimator std. dev. (%)')
-    ax_var.legend(['FRA-MLE', 'FRA'])
+    ax_var.legend(['fra-mle', 'fra'])
     sns.despine(ax=ax_var, offset=despine_offset)
 
     # Bottom: Hypothesis testing
@@ -1740,23 +1762,23 @@ def plot_fig4(n_true_silents_power=26,
     ax_power.set_ylim([0, 128])
     ax_power.set_xticks([0, 10, 20, 30, 40, 50])
     ax_power.set_yticks([0, 32, 64, 96, 128])
-    ax_power.set_xlabel('silent synapses (%)')
-    ax_power.set_ylabel('minimum samples required')
-    ax_power.set_title('Null hypothesis test',
-                       alpha=0.5,
+    ax_power.set_xlabel('true silent (%)')
+    ax_power.set_ylabel('min samples')
+    ax_power.set_title('Evidence against null',
+                       color=[0.5, 0.5, 0.5],
                        fontweight='bold',
                        loc='left')
-    sns.despine(ax=ax_power, offset=despine_offset)    
+    sns.despine(ax=ax_power, offset=despine_offset)
 
     ax_power_inset = inset_axes(ax_power, width='60%', height='60%', loc=1)
     insline_llr_fmle = ax_power_inset.plot(silent_truefrac * 100,
                                            minsamples['h0_llr_framle'],
-                                           color=cm_(0),
+                                           color=color_llr_framle,
                                            alpha=0.9,
                                            linewidth=lw_)
     insline_llr_bin = ax_power_inset.plot(silent_truefrac * 100,
                                           minsamples['h0_llr_binary'],
-                                          color=cm_(0.95),
+                                          color=color_llr_binary,
                                           alpha=0.9,
                                           linewidth=lw_)
     insline_fra = ax_power_inset.plot(silent_truefrac * 100,
@@ -1858,10 +1880,12 @@ def plot_figS4(fname_data, ind_ex_data=1,
     color_blue = sns.diverging_palette(
         240, 15, l=45, s=90, center="dark", as_cmap=True)(0)
 
-    plt.style.use('publication_ml')
+    try:
+        plt.style.use('pub_mbfl_spacious')
+    except FileNotFoundError:
+        pass
 
-    plt.rc('font', size=10)
-    fig = plt.figure(figsize=(7, 5))
+    fig = plt.figure(figsize=(6.85, 4))
     spec_all = gridspec.GridSpec(nrows=2, ncols=4,
                                  figure=fig)
 
@@ -1880,25 +1904,23 @@ def plot_figS4(fname_data, ind_ex_data=1,
     lhood_20obs = est.estimate(est.fra_dists[ind_ex_silent][0:20],
                                plot_joint_likelihood=False)
 
-    ax_mle_1obs.plot(est.hyp*100, lhood_1obs, color=color_blue,
-                     linewidth=1)
+    ax_mle_1obs.plot(est.hyp*100, lhood_1obs, color=color_blue)
     ax_mle_1obs.plot([ex_silent*100, ex_silent*100],
                      [0, ax_mle_1obs.get_ylim()[1]], color='r',
-                     linestyle='dashed', linewidth=1.5)
+                     linestyle='dashed', linewidth=1)
     ax_mle_1obs.set_ylim([0, ax_mle_1obs.get_ylim()[1]])
-    ax_mle_1obs.set_xlabel('ground truth silent (%)')
+    ax_mle_1obs.set_xlabel('true silent (%)')
     ax_mle_1obs.set_ylabel('likelihood (norm.)')
     ax_mle_1obs.set_title('Single observation')
     ax_mle_1obs.set_xlim([0, 100])
     sns.despine(ax=ax_mle_1obs, offset=despine_offset)
 
-    ax_mle_20obs.plot(est.hyp*100, lhood_20obs, color=color_blue,
-                      linewidth=1)
+    ax_mle_20obs.plot(est.hyp*100, lhood_20obs, color=color_blue)
     ax_mle_20obs.plot([ex_silent*100, ex_silent*100],
                       [0, ax_mle_20obs.get_ylim()[1]], color='r',
-                      linestyle='dashed', linewidth=1.5)
+                      linestyle='dashed', linewidth=1)
     ax_mle_20obs.set_ylim([0, ax_mle_20obs.get_ylim()[1]])
-    ax_mle_20obs.set_xlabel('ground truth silent (%)')
+    ax_mle_20obs.set_xlabel('true silent (%)')
     ax_mle_20obs.set_ylabel('likelihood (norm.)')
     ax_mle_20obs.set_title('n=20 observations')
     ax_mle_20obs.set_xlim([0, 100])
@@ -1924,10 +1946,10 @@ def plot_figS4(fname_data, ind_ex_data=1,
             _framle_dist[ind_obs] = est.hyp[np.argmax(_lhood)]
 
         _hist_framle = _ax.hist(_framle_dist*100, bins=bins_, histtype='step',
-                                color=sns.xkcd_rgb['blue green'], linewidth=1,
-                                density=True)
+                                color=sns.xkcd_rgb['blue green'],
+                                density=True, linewidth=0.8)
         _hist_fra = _ax.hist(_fra_dist*100, bins=bins_, histtype='step',
-                             color='k', linewidth=1,
+                             color='k', linewidth=0.8,
                              density=True)
         _ax.set_ylabel('pdf')
         _ax.set_xlabel('estimated silent (%)')
@@ -1949,8 +1971,8 @@ def plot_figS4(fname_data, ind_ex_data=1,
     # 1. likelihood function of single experiment
     ax_lhood_ex.plot(est.hyp[0:ind_ylim_max] * 100,
                      joint_lhood_ex[0:ind_ylim_max],
-                     color=color_blue, linewidth=1)
-    ax_lhood_ex.set_xlabel('ground truth silent (%)')
+                     color=color_blue)
+    ax_lhood_ex.set_xlabel('true silent (%)')
     ax_lhood_ex.set_ylabel('likelihood (norm.)')
     ax_lhood_ex.set_xlim([0, ax_lhood_ex.get_xlim()[1]])
     ax_lhood_ex.set_ylim([0, ax_lhood_ex.get_ylim()[1]])
@@ -1959,18 +1981,16 @@ def plot_figS4(fname_data, ind_ex_data=1,
     # 2. Joint likelihood function of all experiments
     ax_lhood_all.plot(est.hyp[0:ind_ylim_max] * 100,
                       joint_lhood_all[0:ind_ylim_max],
-                      color=color_blue,
-                      linewidth=1)
+                      color=color_blue)
     ax_lhood_all.plot([mle*100, mle*100], [0, 1],
-                      color=[0.85, 0.1, 0.2],
-                      linewidth=1.5)
+                      color=[0.85, 0.1, 0.2])
     ax_lhood_all.text(0.5, 0.6,
                       'Max-likelihood \nestimate: ' +
                       str(format(mle * 100, '.1f')) + '%',
                       color=[0.85, 0.1, 0.2],
                       transform=ax_lhood_all.transAxes,
                       horizontalalignment='left')
-    ax_lhood_all.set_xlabel('ground truth silent (%)')
+    ax_lhood_all.set_xlabel('true silent (%)')
     ax_lhood_all.set_ylabel('likelihood (norm.)')
     ax_lhood_all.set_xlim([0, ax_lhood_all.get_xlim()[1]])
     ax_lhood_all.set_ylim([0, ax_lhood_all.get_ylim()[1]])
@@ -1986,7 +2006,7 @@ def plot_figS4(fname_data, ind_ex_data=1,
                      histtype='stepfilled',
                      edgecolor=[1, 1, 1],
                      facecolor=color_blue,
-                     linewidth=1,
+                     linewidth=0.8,
                      alpha=0.6)
     ax_mle_hist.hist(fra_dist_mle,
                      bins=bins_hist,
@@ -1994,7 +2014,7 @@ def plot_figS4(fname_data, ind_ex_data=1,
                      len(fra_dist_mle),
                      histtype='step',
                      edgecolor=[0.85, 0.1, 0.2],
-                     linewidth=1,
+                     linewidth=0.8,
                      alpha=0.9)
 
     # 4. Print out the pval for KS test between the distributions
