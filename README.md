@@ -136,9 +136,11 @@ Each of these functions will redo all analysis/simulations and will return a
 near-fully formatted figure.
 
 - `sil.figures.plot_fig1()`
-- `sil.figures.plot_figS1()`
 - `sil.figures.plot_fig2()`
 - `sil.figures.plot_fig4()`
+- `sil.figures.plot_figS1()`
+- `sil.figures.plot_figS2()`
+- `sil.figures.plot_figS3()`
 - `sil.figures.plot_figS4()`
 
 Note that some figures (eg FigS2-3) are constructed from base figures with
