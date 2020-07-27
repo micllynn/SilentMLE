@@ -7,6 +7,7 @@ Date: 19.9
 
 import os
 import numpy as np
+import scipy as sp
 import scipy.stats as sp_stats
 import h5py
 
@@ -1825,14 +1826,142 @@ def plot_fig4(n_true_silents_power=26,
     return
 
 
-def plot_figS4(fname_data, ind_ex_data=1,
+def plot_figS4_bottom(n_true_silents_power=26,
+                      n_true_silents_mle=500,
+                      pr_dist_sil=PrDist(sp_stats.gamma,
+                                         args={'a': 2,
+                                               'scale': 1/5.8}),
+                      pr_dist_nonsil=PrDist(sp_stats.gamma,
+                                            args={'a': 3,
+                                                  'scale': 1/5.8}),
+                      frac_reduction=0.1,     
+                      sample_draws=5000,
+                      fontsize=8,
+                      despine_offset={'left': 5},
+                      figname='FigS4_bottom.pdf'):
+    '''
+    Plots the right side of Fig 5 (change in Pr between silent
+    and nonsilent synapses)
+    '''
+
+    # 1. Estimator bias and variance calculations
+    ################################################
+    # Compute bias and variance of corrected estimator
+    # --------------------
+    print('Calculating bias/variance...')
+    est = Estimator(n_likelihood_points=n_true_silents_mle,
+                    pr_dist_sil=pr_dist_sil,
+                    pr_dist_nonsil=pr_dist_nonsil,
+                    frac_reduction=frac_reduction)
+    est_hyp = est.hyp
+
+    bias = np.empty(len(est_hyp))
+    bias_framle = np.empty_like(bias)
+    stdev = np.empty(len(est_hyp))
+    stdev_framle = np.empty_like(stdev)
+
+    for ind_sil, sil in enumerate(est_hyp):
+        print(f'fra_mle: silent={sil*100}%', end='\r')
+        _fra_dist = est.fra_dists[ind_sil]
+        _llik_on_all = est.estimate(_fra_dist, plot_joint_likelihood=False,
+                                    verbose=False)
+        _mle_on_all = est.hyp[np.argmax(_llik_on_all)]
+
+        _framle_dist = np.empty(len(_fra_dist))
+
+        for ind_obs, _fra_obs in enumerate(_fra_dist):
+            _lhood = est.estimate([_fra_obs],
+                                  plot_joint_likelihood=False,
+                                  verbose=False)
+            _framle_dist[ind_obs] = est.hyp[np.argmax(_lhood)]
+
+        bias[ind_sil] = np.mean(_fra_dist) - sil
+        stdev[ind_sil] = np.std(_fra_dist)
+
+        bias_framle[ind_sil] = _mle_on_all - sil
+        stdev_framle[ind_sil] = np.std(_framle_dist)
+
+    # 2. Make figure
+    #####################################################
+    try:
+        plt.style.use('publication_ml')
+    except FileNotFoundError:
+        pass
+    lw_ = 1  # universal linewidth argument passed to each plot
+
+    fig = plt.figure(constrained_layout=True)
+    fig.set_figheight(2)
+    fig.set_figwidth(3.43)
+    plt.rc('font', size=fontsize)
+
+    # Define spec for entire fig
+    spec_all = gridspec.GridSpec(nrows=1,
+                                 ncols=2,
+                                 figure=fig, wspace=0.2,
+                                 hspace=0.4)
+
+    # Define colors to be used
+    # color_1 = np.array([0.25, 0.55, 0.18])
+    color_fra_palette = sns.diverging_palette(130, 30, l=45, s=90,
+                                              center="dark", as_cmap=True)
+    color_fra = color_fra_palette(0.1)
+    color_binary = [0.2, 0.2, 0.2]
+    color_llr_framle = cm_(0)
+    color_llr_binary = cm_(0.95)
+
+    # Top: FRA-MLE bias and variance
+    # -----------------------------------------------
+    ax_bias = fig.add_subplot(spec_all[0, 0])
+    ax_bias.plot(est_hyp * 100, bias_framle * 100,
+                 color=color_llr_framle, linewidth=lw_)
+    ax_bias.plot(est_hyp * 100, bias * 100,
+                 color=color_fra, linewidth=lw_)
+    ax_bias.set_xlim([0, 50])
+    ax_bias.set_xticks([0, 10, 20, 30, 40, 50])
+    ax_bias.set_xlabel('true silent (%)')
+    ax_bias.set_ylabel('estimator bias (%)')
+    ax_bias.legend(['fra-mle', 'fra'])
+    sns.despine(ax=ax_bias, offset=despine_offset)
+
+    ax_var = fig.add_subplot(spec_all[0, 1])
+    ax_var.plot(est_hyp * 100, stdev_framle * 100,
+                color=color_llr_framle, linewidth=lw_)
+    ax_var.plot(est_hyp * 100, stdev * 100,
+                color=color_fra, linewidth=lw_)
+    ax_var.set_xlim([0, 50])
+    ax_var.set_xticks([0, 10, 20, 30, 40, 50])
+    ax_var.set_ylim([0, 40])
+    ax_var.set_xlabel('true silent (%)')
+    ax_var.set_ylabel('estimator std. dev. (%)')
+    ax_var.legend(['fra-mle', 'fra'])
+    sns.despine(ax=ax_var, offset=despine_offset)
+
+    # ---------------------------------
+    # Set tight layout and save
+    fig.set_constrained_layout_pads(w_pad=0.001,
+                                    h_pad=0.001,
+                                    hspace=0.01,
+                                    wspace=0.01)
+
+    path = os.path.join(os.getcwd(), 'figs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path_f = os.path.join(path, figname)
+
+    fig.savefig(path_f, bbox_inches='tight')
+    plt.show()
+
+    return
+
+
+def plot_figS5(fname_data, ind_ex_data=1,
                est_simulations=10000,
                est_likelihood_pts=200,
                est_smooth_window=0.1,
                est_smooth_polyorder=3,
                n_redo_estimation=1,
                despine_offset={'left': 5},
-               figname='FigS4.pdf'):
+               figname='FigS5.pdf'):
 
     """Plots figure S4 (MLE examples, and MLE on experimental silent estimates).
     """
