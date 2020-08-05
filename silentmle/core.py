@@ -96,9 +96,10 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
                    pr_dist_sil=PrDist(sp_stats.uniform),
                    pr_dist_nonsil=PrDist(sp_stats.uniform),
                    n_start=100,
-                   failrate_low=0.3, failrate_high=0.7,
+                   failrate_low=0.2, failrate_high=0.8,
                    plot_ex=False, unitary_reduction=True,
-                   frac_reduction=0.2, verbose=True):
+                   frac_reduction=0.2, sim_oversample_factor=4,
+                   verbose=True):
     """
     Function which simulates a set of minimum electrical stimulation experi-
     ments and generates a subset of silent and nonsilent synapses sampled
@@ -119,11 +120,6 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
                 the theoretical failure rate of the population at
                 hyperpolarized potentials (F = Pr(1)*Pr(2)*...*Pr(i)
                 for synapses n = 1, 2, ... i.) reaches the imposed bounds.
-                    - Yields a subset of synapses which is an unbiased
-                    representation of the larger set. It is not experimentally
-                    realistic, but provides a good sanity check and allows
-                    exploration of what an unbiased subset selection would
-                    hypothetically look like.
             B. If unitary_reduction is False, then fractions of the total
                 recorded synapse population are removed each round (according
                 to frac_reduction) until the theorietical failure rate of the
@@ -157,23 +153,16 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
         provide small synapse ensembles that, on average, are faithful
         subsamples of the larger population. 'iterative' imposes some
         experimental bias on the subsamples.
-    unitary_reduction : bool
-        If method = 'iterative', determines whether synapses are eliminated
-        one at a time from the experimental ensembles (true), or are
-        eliminated in fractional chunks proportional to the total n (false).
-    frac_reduction : float
-        If unitary_reduction is false, then frac_reduction describes the
-        fraction of the total n to reduce the recorded population by
-        each step.
     pr_dist_sil : PrDist class instance
         Describes the distribution with which to draw silent synapse
         release probabilities from.
     pr_dist_nonsil : PrDist class instance
         Describes the distribution with which to draw nonsilent synapse
         release probabilities from.
-    num_trials : int (default  50)
-        Number of trials to simulate for each voltage-clamp condition (e.g.)
-        hyperpolarized and depolarized.
+    n_start : int (default 100)
+        The number of synapses to start with for the experimental down-
+        sampling. Since ~3-6 nonsilent synapses are typically reached, the
+        precise value of n_start does not carry much practical importance.
     failrate_low : float (default 0.2)
         The lower bound of hyperpolarized failure rates to accept for the
         synapse ensembles (a theoretical calculation based on release
@@ -184,12 +173,24 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
         synapse ensembles (a theoretical calculation based on release
         probabilities of all synapses - individual experiments may differ
         slightly from this).
-    n_start : int (default 100)
-        The number of synapses to start with for the experimental down-
-        sampling. Since ~3-6 nonsilent synapses are typically reached, the
-        precise value of n_start does not carry much practical importance.
     plot_ex : boolean (default False)
         Whether to plot an example of the experimental synapse downsampling.
+    unitary_reduction : bool
+        If method = 'iterative', determines whether synapses are eliminated
+        one at a time from the experimental ensembles (True), or are
+        eliminated in fractional chunks proportional to the total n (False).
+    frac_reduction : float
+        If unitary_reduction is false, then frac_reduction describes the
+        fraction of the total n to reduce the recorded population by
+        each step.
+    sim_oversample_factor : int (default 4)
+        Factor by which to oversample experimental simulations by, compared
+        to the requested n_simulations. More experimental simulations than
+        requested are typically needed to compensate for the fact that some
+        simulations simply do not yield usable ensembles of synapses (ie their
+        failure rates are not in the acceptable bounds.)
+            - If this function hangs, sim_oversample_factor can be increased
+            to compensate.
     verbose : boolean (default False)
         Toggles verbosity for the simulation on and off for troubleshooting
         or for use during large-scale simulations.
@@ -217,7 +218,7 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
     if method == 'iterative':
         # Oversample simulations needed due to the fact that some sims will not
         # have sufficient Pr's and n's to produce desired failure rate
-        n_sims_oversampled = n_simulations * 3
+        n_sims_oversampled = n_simulations * sim_oversample_factor
 
         # Generate an initial large constellation of synapses
         # (n_start in size) drawm from a binomial filling procedure
@@ -285,6 +286,7 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
             ind_remove_nonsilent = np.ma.where(sil_syn_to_remove == 0)[0]
             ind_remove_nonsilent[ind_remove_nonsilent < 0] = 0
             nonsilent_syn_group[ind_remove_nonsilent] -= 1
+            nonsilent_syn_group[nonsilent_syn_group < 0] = 0  # remove below 0
 
             # Update release probabilities
             pr_silent_syn_group[ind_remove_silent,
@@ -902,9 +904,10 @@ def power_analysis_llr(fra_dist_1, likelihoods,
     fra_dist_1 : np.ndarray | .shape = (n)
         Vector of returned FRA values from population A (from generate_fra_
         distribution)
-    fra_dist_2 : np.ndarray | .shape = (n)
-        Vector of returned FRA values from population B (from generate_fra_
-        distribution)
+    likelihoods : np.ndarray | .shape = (obs, hyp)
+        Likelihood function computed numerically. Used for LLR testing.
+    ind_null_silent_truefrac : int 
+        Index of null hypothesis in likelihoods (0 silent)
     init_guess : integer
         An initial guess for number of samples required to discriminate the
         two populations. The power analysis starts its search here. It is useful
