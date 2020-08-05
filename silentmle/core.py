@@ -485,7 +485,8 @@ def gen_fra_dist(silent_fraction, method='iterative',
                  zeroing=False, graph_ex=False, verbose=False,
                  unitary_reduction=False, frac_reduction=0.2,
                  binary_vals=False, failrate_low=0.2,
-                 failrate_high=0.8):
+                 failrate_high=0.8,
+                 sim_oversample_factor=4):
     """
     This function generates a distribution of estimates for fraction silent
     synapses returned by the failure-rate analysis estimator, given a single
@@ -590,6 +591,7 @@ def gen_fra_dist(silent_fraction, method='iterative',
                          failrate_high=failrate_high,
                          unitary_reduction=unitary_reduction,
                          frac_reduction=frac_reduction,
+                         sim_oversample_factor=sim_oversample_factor,
                          verbose=verbose)
 
     # Calculate p(failure) mathematically for hyperpol,
