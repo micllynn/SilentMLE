@@ -183,12 +183,14 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
         If unitary_reduction is false, then frac_reduction describes the
         fraction of the total n to reduce the recorded population by
         each step.
-    sim_oversample_factor : int (default 4)
+    sim_oversample_factor : int
         Factor by which to oversample experimental simulations by, compared
         to the requested n_simulations. More experimental simulations than
         requested are typically needed to compensate for the fact that some
         simulations simply do not yield usable ensembles of synapses (ie their
         failure rates are not in the acceptable bounds.)
+            - Note that sim_oversample_factor is only applied to cases with
+            silent_fraction > 0.9 (not needed below this).
             - If this function hangs, sim_oversample_factor can be increased
             to compensate.
     verbose : boolean (default False)
@@ -218,7 +220,10 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
     if method == 'iterative':
         # Oversample simulations needed due to the fact that some sims will not
         # have sufficient Pr's and n's to produce desired failure rate
-        n_sims_oversampled = n_simulations * sim_oversample_factor
+        if silent_fraction >= 0.9:
+            n_sims_oversampled = n_simulations * sim_oversample_factor
+        elif silent_fraction < 0.9:
+            n_sims_oversampled = n_simulations * 2
 
         # Generate an initial large constellation of synapses
         # (n_start in size) drawm from a binomial filling procedure
@@ -481,12 +486,12 @@ def fra(fh, fd):
 def gen_fra_dist(silent_fraction, method='iterative',
                  pr_dist_sil=PrDist(sp_stats.uniform),
                  pr_dist_nonsil=PrDist(sp_stats.uniform),
-                 num_trials=50, n_simulations=10000, n_start=100,
+                 num_trials=100, n_simulations=10000, n_start=100,
                  zeroing=False, graph_ex=False, verbose=False,
                  unitary_reduction=False, frac_reduction=0.2,
                  binary_vals=False, failrate_low=0.2,
                  failrate_high=0.8,
-                 sim_oversample_factor=4):
+                 sim_oversample_factor=8):
     """
     This function generates a distribution of estimates for fraction silent
     synapses returned by the failure-rate analysis estimator, given a single
@@ -559,6 +564,17 @@ def gen_fra_dist(silent_fraction, method='iterative',
         verbose : boolean (default False)
             Toggles verbosity for the simulation on and off for troubleshooting
             or for use during large-scale simulations.
+        sim_oversample_factor : int
+            Factor by which to oversample experimental simulations by, compared
+            to the requested n_simulations. More experimental simulations than
+            requested are typically needed to compensate for the fact that some
+            simulations simply do not yield usable ensembles of synapses (ie
+            failure rates are not in the acceptable bounds.)
+                - Note that sim_oversample_factor is only applied to cases with
+                silent_fraction > 0.9 (not needed below this).
+                - If this function hangs, sim_oversample_factor can be
+                increased to compensate
+
 
     Returns
     -------

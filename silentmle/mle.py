@@ -86,6 +86,16 @@ class Estimator(object):
         verbose : boolean (default False)
             Toggles verbosity for the simulation on and off for troubleshooting
             or for use during large-scale simulations.
+        sim_oversample_factor : int
+            Factor by which to oversample experimental simulations by, compared
+            to the requested n_simulations. More experimental simulations than
+            requested are typically needed to compensate for the fact that some
+            simulations simply do not yield usable ensembles of synapses (ie
+            failure rates are not in the acceptable bounds.)
+                - Note that sim_oversample_factor is only applied to cases with
+                silent_fraction > 0.9 (not needed below this).
+                - If this function hangs, sim_oversample_factor can be
+                increased to compensate.
 
     Returns
     --------
