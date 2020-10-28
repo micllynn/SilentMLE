@@ -131,10 +131,12 @@ data = [-0.36,  0.37,  0.57,  0.89, -0.43,
         0.49,  0.20,  0.22,  0.16,  0.51,
         0.67,  0.17, -0.48, -0.25,  0.00,
         0.16,  0.16,  0.90,  0.23, -0.15]
-likelihood = estimator.estimate(data, dtype='failrate')
+likelihood = estimator.estimate(data, dtype='est')
 ```
 
-The resulting figure is shown below:
+The resulting figure is shown below, and corresponds to Figure 1b in
+the STAR Protocols paper. It can be used to verify correct installation
+and usage of the package.
 ![figure_output](/ex-fig.jpg)
 
 ## Advanced commands
