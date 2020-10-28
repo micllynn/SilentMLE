@@ -134,7 +134,7 @@ data = [-0.36,  0.37,  0.57,  0.89, -0.43,
 likelihood = estimator.estimate(data, dtype='failrate')
 ```
 
-The resulting figure:
+The resulting figure is shown below:
 ![figure_output](/ex-fig.pdf)
 
 ## Advanced commands
