@@ -108,6 +108,35 @@ Here, likelihood returns a vector of length `h` containing the joint
 likelihood across all observations, where `h` is the hypothesis space
 size (i.e. `len(estimator.hyp)`)
 
+## Example of full estimation procedure and output:
+In this section, we provide an example code block for the full SilentMLE
+estimation, as well as the resulting figure.
+
+It is important to tailor the parameters to one's unique set of
+experimental parameters for optimal estimation (see above). However,
+this can act as a starting point for the use of the SilentMLE package.
+
+```python
+import silentmle as sil
+import scipy.stats as sp_stats
+
+estimator = sil.Estimator(n_likelihood_points=500,
+      pr_dist_sil=sil.PrDist(sp_stats.uniform),
+	  pr_dist_nonsil=sil.PrDist(sp_stats.uniform),
+	  num_trials=50, failrate_low=0.2,
+      failrate_high=0.8)
+	  
+# replace data here with fra-calculated silent fraction for each cell
+data = [-0.36,  0.37,  0.57,  0.89, -0.43,
+        0.49,  0.20,  0.22,  0.16,  0.51,
+        0.67,  0.17, -0.48, -0.25,  0.00,
+        0.16,  0.16,  0.90,  0.23, -0.15]
+likelihood = estimator.estimate(data, dtype='failrate')
+```
+
+The resulting figure:
+! [figure_output] (/ex-fig.pdf)
+
 ## Advanced commands
 
 ### Core simulation/analysis functions

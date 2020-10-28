@@ -99,6 +99,7 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
                    failrate_low=0.2, failrate_high=0.8,
                    plot_ex=False, unitary_reduction=True,
                    frac_reduction=0.2, sim_oversample_factor=4,
+                   sim_oversample_thresh=0.9,
                    verbose=True):
     """
     Function which simulates a set of minimum electrical stimulation experi-
@@ -184,7 +185,8 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
         fraction of the total n to reduce the recorded population by
         each step.
     sim_oversample_factor : int
-        Factor by which to oversample experimental simulations by, compared
+        Factor by which to oversample experimental simulations by
+        (if silent_frac > sim_oversample_thresh), compared
         to the requested n_simulations. More experimental simulations than
         requested are typically needed to compensate for the fact that some
         simulations simply do not yield usable ensembles of synapses (ie their
@@ -193,6 +195,11 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
             silent_fraction > 0.9 (not needed below this).
             - If this function hangs, sim_oversample_factor can be increased
             to compensate.
+    sim_oversample_thresh : float
+        Threshold of silent_frac after which to start oversampling simulations
+        by sim_oversample_factor (to ensure that sufficient numbers of sims
+        are returned despite some sims being discarded for failure rate
+        ranges not falling in the specified interval).
     verbose : boolean (default False)
         Toggles verbosity for the simulation on and off for troubleshooting
         or for use during large-scale simulations.
@@ -220,9 +227,9 @@ def draw_subsample(silent_fraction=0.5, n_simulations=100,
     if method == 'iterative':
         # Oversample simulations needed due to the fact that some sims will not
         # have sufficient Pr's and n's to produce desired failure rate
-        if silent_fraction >= 0.9:
+        if silent_fraction >= sim_oversample_thresh:
             n_sims_oversampled = n_simulations * sim_oversample_factor
-        elif silent_fraction < 0.9:
+        elif silent_fraction < sim_oversample_thresh:
             n_sims_oversampled = n_simulations * 2
 
         # Generate an initial large constellation of synapses
@@ -491,7 +498,8 @@ def gen_fra_dist(silent_fraction, method='iterative',
                  unitary_reduction=False, frac_reduction=0.2,
                  binary_vals=False, failrate_low=0.2,
                  failrate_high=0.8,
-                 sim_oversample_factor=8):
+                 sim_oversample_factor=8,
+                 sim_oversample_thresh=0.9):
     """
     This function generates a distribution of estimates for fraction silent
     synapses returned by the failure-rate analysis estimator, given a single
@@ -565,7 +573,8 @@ def gen_fra_dist(silent_fraction, method='iterative',
             Toggles verbosity for the simulation on and off for troubleshooting
             or for use during large-scale simulations.
         sim_oversample_factor : int
-            Factor by which to oversample experimental simulations by, compared
+            Factor by which to oversample experimental simulations by (when
+            silent_frac > sim_oversample_thresh), compared
             to the requested n_simulations. More experimental simulations than
             requested are typically needed to compensate for the fact that some
             simulations simply do not yield usable ensembles of synapses (ie
@@ -574,7 +583,11 @@ def gen_fra_dist(silent_fraction, method='iterative',
                 silent_fraction > 0.9 (not needed below this).
                 - If this function hangs, sim_oversample_factor can be
                 increased to compensate
-
+        sim_oversample_thresh : float
+            Threshold of silent_frac after which to start oversampling #sims
+            by sim_oversample_factor (to ensure that sufficient numbers of sims
+            are returned despite some sims being discarded for failure rate
+            ranges not falling in the specified interval).
 
     Returns
     -------
@@ -608,6 +621,7 @@ def gen_fra_dist(silent_fraction, method='iterative',
                          unitary_reduction=unitary_reduction,
                          frac_reduction=frac_reduction,
                          sim_oversample_factor=sim_oversample_factor,
+                         sim_oversample_thresh=sim_oversample_thresh,
                          verbose=verbose)
 
     # Calculate p(failure) mathematically for hyperpol,

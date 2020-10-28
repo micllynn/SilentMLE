@@ -96,6 +96,11 @@ class Estimator(object):
                 silent_fraction > 0.9 (not needed below this).
                 - If this function hangs, sim_oversample_factor can be
                 increased to compensate.
+        sim_oversample_thresh : float
+            Threshold of silent_frac after which to start oversampling #sims
+            by sim_oversample_factor (to ensure that sufficient numbers of sims
+            are returned despite some sims being discarded for failure rate
+            ranges not falling in the specified interval).
 
     Returns
     --------
